@@ -147,6 +147,31 @@ pub const Object = opaque {
         return if (prop_ptr) |p| .from(p) else null;
     }
 
+    pub const PropertyPurpose = enum(c.zend_prop_purpose) {
+        debug = c.ZEND_PROP_PURPOSE_DEBUG,
+        array_cast = c.ZEND_PROP_PURPOSE_ARRAY_CAST,
+        serialize = c.ZEND_PROP_PURPOSE_SERIALIZE,
+        var_export = c.ZEND_PROP_PURPOSE_VAR_EXPORT,
+        json = c.ZEND_PROP_PURPOSE_JSON,
+    };
+
+    /// Get a read-only property view for the given purpose; releaseProperties() when done.
+    /// Calls object handlers; on exception, releases the view and returns PhpException.
+    pub fn propertiesFor(self: *Object, purpose: PropertyPurpose) errors.Exception!?*Array {
+        var value = Zval.raw.init(.object, self); // Borrowed; do not release.
+        const result: ?*c.HashTable = c.zend_get_properties_for(&value, @backingInt(purpose));
+        if (errors.hasException()) {
+            c.phpz_release_properties(result);
+            return error.PhpException;
+        }
+        return if (result) |table| .from(table) else null;
+    }
+
+    /// Release a propertiesFor() view, not a borrowed properties() table. Accepts null.
+    pub fn releaseProperties(properties_view: ?*Array) void {
+        c.phpz_release_properties(if (properties_view) |view| view.ptr() else null);
+    }
+
     /// Get properties through zend_std_get_properties, bypassing a custom
     /// get_properties handler. Lazy initialization may throw a PHP exception.
     ///
@@ -198,8 +223,8 @@ pub const Object = opaque {
         return self.class().findMethod(method_name);
     }
 
-    /// Property read fetch mode, passed to `readStdProperty`.
-    pub const StdPropertyReadMode = enum(c_int) {
+    /// Fetch mode for property and dimension reads.
+    pub const PropertyReadMode = enum(c_int) {
         /// Normal read: `$obj->prop`.
         read = c.BP_VAR_R,
         /// Read for `isset()` / `empty()` style checks.
@@ -212,6 +237,38 @@ pub const Object = opaque {
         unset = c.BP_VAR_UNSET,
         _,
     };
+
+    /// Read through the object's handler in the current PHP scope.
+    /// Scratch and result ownership follow readStdProperty().
+    pub fn readProperty(self: *Object, name: []const u8, comptime read: PropertyReadMode, scratch: *c.zval) errors.Exception!*c.zval {
+        const key = String.init(name, false);
+        defer key.release();
+        return self.readPropertyStr(key, read, scratch);
+    }
+
+    /// Like readProperty(), with a borrowed Zend string name.
+    pub fn readPropertyStr(self: *Object, name: *String, comptime read: PropertyReadMode, scratch: *c.zval) errors.Exception!*c.zval {
+        const result = self.ptr().handlers.*.read_property.?(self.ptr(), name.ptr(), @backingInt(read), null, scratch);
+        if (errors.hasException()) return error.PhpException;
+        return result;
+    }
+
+    /// Write through the object's handler in the current PHP scope.
+    /// Borrows name and dereferenced value; retains stored values.
+    /// The result is borrowed and may alias the input.
+    pub fn writeProperty(self: *Object, name: []const u8, value: *c.zval) errors.Exception!?*c.zval {
+        const key = String.init(name, false);
+        defer key.release();
+        return self.writePropertyStr(key, value);
+    }
+
+    /// Like writeProperty(), with a borrowed Zend string name.
+    pub fn writePropertyStr(self: *Object, name: *String, value: *c.zval) errors.Exception!?*c.zval {
+        assert(!Zval.raw.is(value, .reference));
+        const result = self.ptr().handlers.*.write_property.?(self.ptr(), name.ptr(), value, null);
+        if (errors.hasException()) return error.PhpException;
+        return result;
+    }
 
     /// Read a property value.
     ///
@@ -226,7 +283,7 @@ pub const Object = opaque {
     pub fn readStdProperty(
         self: *Object,
         name: []const u8,
-        comptime read: StdPropertyReadMode,
+        comptime read: PropertyReadMode,
         scratch: *c.zval,
     ) Function.Error!*c.zval {
         const zstr = String.init(name, false);
@@ -245,9 +302,8 @@ pub const Object = opaque {
 
     /// Write a property value.
     ///
-    /// Ownership: `value` is consumed according to Zend property write
-    /// semantics. If `value` is borrowed and must remain independently owned,
-    /// addref/copy it before calling. The returned pointer is borrowed.
+    /// Borrows the dereferenced value; retains stored values.
+    /// The result is borrowed and may alias the input.
     ///
     /// Returns `error.PhpException` if a magic `__set` handler throws.
     pub fn writeStdProperty(
@@ -255,6 +311,7 @@ pub const Object = opaque {
         name: []const u8,
         value: *c.zval,
     ) Function.Error!?*c.zval {
+        assert(!Zval.raw.is(value, .reference));
         const zstr = String.init(name, false);
         defer zstr.release();
 
@@ -353,6 +410,26 @@ pub const Object = opaque {
         if (errors.hasException()) return error.PhpException;
     }
 
+    /// Set by a borrowed Zend string name in the object's class scope.
+    /// Borrows refcounted inputs; copies .string bytes. Dereference .mixed inputs.
+    pub fn setPropertyStr(self: *Object, comptime zk: Zval.Kind, name: *String, value: Zval.Type(zk)) errors.Exception!void {
+        switch (zk) {
+            .mixed => {
+                assert(!Zval.raw.is(value, .reference));
+                c.zend_update_property_ex(self.class().ptr(), self.ptr(), name.ptr(), value);
+            },
+            .reference => @compileError("property writes do not accept .reference; pass reference.val() with .mixed instead"),
+            .undef, .indirect, .ptr => @compileError("'" ++ @tagName(zk) ++ "' cannot be set as object property"),
+            inline else => {
+                var temporary = Zval.raw.init(zk, value);
+                // Only .string allocates an owned value; other inputs are borrowed.
+                defer if (zk == .string) Zval.raw.release(&temporary);
+                c.zend_update_property_ex(self.class().ptr(), self.ptr(), name.ptr(), &temporary);
+            },
+        }
+        if (errors.hasException()) return error.PhpException;
+    }
+
     /// Read object property.
     ///
     /// Ownership: returned pointer is either borrowed from the object/runtime
@@ -369,6 +446,49 @@ pub const Object = opaque {
         const val = c.zend_read_property(ce, obj, prop_name.ptr, prop_name.len, silent, scratch);
         if (errors.hasException()) return error.PhpException;
         return .from(val);
+    }
+
+    /// Like property(), with a borrowed Zend string name and the same class scope
+    /// and scratch/result ownership.
+    pub fn propertyStr(self: *Object, name: *String, silent: bool, scratch: *c.zval) errors.Exception!*Zval {
+        const result = c.zend_read_property_ex(self.class().ptr(), self.ptr(), name.ptr(), silent, scratch);
+        if (errors.hasException()) return error.PhpException;
+        return .from(result);
+    }
+
+    /// Read through read_dimension, borrowing offset; null requests append access
+    /// if supported. Initialize scratch to IS_UNDEF and release it even on error.
+    /// The result is borrowed or points to scratch.
+    pub fn readDimension(self: *Object, offset: ?*c.zval, comptime read: PropertyReadMode, scratch: *c.zval) errors.Exception!*c.zval {
+        const result = self.ptr().handlers.*.read_dimension.?(self.ptr(), offset, @backingInt(read), scratch);
+        if (errors.hasException()) return error.PhpException;
+        return result;
+    }
+
+    /// Write through write_dimension; a null offset appends.
+    /// Borrows offset and dereferenced value; retains stored values.
+    pub fn writeDimension(self: *Object, offset: ?*c.zval, value: *c.zval) errors.Exception!void {
+        assert(!Zval.raw.is(value, .reference));
+        self.ptr().handlers.*.write_dimension.?(self.ptr(), offset, value);
+        if (errors.hasException()) return error.PhpException;
+    }
+
+    pub const DimensionCheck = enum(c_int) {
+        isset = 0,
+        not_empty = 1,
+    };
+
+    /// Check a borrowed offset through has_dimension using isset/!empty semantics.
+    pub fn hasDimension(self: *Object, offset: *c.zval, check: DimensionCheck) errors.Exception!bool {
+        const result = self.ptr().handlers.*.has_dimension.?(self.ptr(), offset, @backingInt(check));
+        if (errors.hasException()) return error.PhpException;
+        return result != 0;
+    }
+
+    /// Remove a borrowed offset through unset_dimension.
+    pub fn unsetDimension(self: *Object, offset: *c.zval) errors.Exception!void {
+        self.ptr().handlers.*.unset_dimension.?(self.ptr(), offset);
+        if (errors.hasException()) return error.PhpException;
     }
 
     /// Unset (delete) object property.

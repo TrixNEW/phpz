@@ -214,7 +214,16 @@ namespace MyPHPExt\Test {
     function checkStringArguments(string $value): bool {}
     function checkZvalStrings(string $value, object $fixture): string {}
     function checkStringWriteFailure(object $fixture, string $api, string $exception): void {}
+    function checkZendStrings(): void {}
+    function objectView(object $object, string $purpose): ?array {}
+    function readObjectNative(object $object, string $name, string $api): mixed {}
+    function writeObjectNative(object $object, string $name, mixed $input, string $api): void {}
+    function objectDimension(object $object, string $action, mixed $offset, mixed $input): mixed {}
+    function checkObjectViews(array $empty): void {}
     function checkArrayCallbacks(): void {}
+    function checkArrayHashTable(array $references): void {}
+    function isArrayList(array $source): bool {}
+    function arrayToList(array $source): array {}
     function checkObjectPropertyHandlers(?object $lazy = null): void {}
     function checkObjectCreation(string $stage): void {}
     function separateArray(array $values): array {}

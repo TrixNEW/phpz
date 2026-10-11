@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 084a3103e9eaf9d30fed735fc8524f0fa003c455 */
+ * Stub hash: 43904c90ae8598827c9477d46150dfff5a87bd36 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -99,7 +99,50 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkStringWriteFa
 	ZEND_ARG_TYPE_INFO(0, exception, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+#define arginfo_MyPHPExt_Test_checkZendStrings arginfo_hello
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_objectView, 0, 2, IS_ARRAY, 1)
+	ZEND_ARG_TYPE_INFO(0, object, IS_OBJECT, 0)
+	ZEND_ARG_TYPE_INFO(0, purpose, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_readObjectNative, 0, 3, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, object, IS_OBJECT, 0)
+	ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, api, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_writeObjectNative, 0, 4, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, object, IS_OBJECT, 0)
+	ZEND_ARG_TYPE_INFO(0, name, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, input, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, api, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_objectDimension, 0, 4, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, object, IS_OBJECT, 0)
+	ZEND_ARG_TYPE_INFO(0, action, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, offset, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, input, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkObjectViews, 0, 1, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, empty, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
 #define arginfo_MyPHPExt_Test_checkArrayCallbacks arginfo_hello
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkArrayHashTable, 0, 1, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, references, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_isArrayList, 0, 1, _IS_BOOL, 0)
+	ZEND_ARG_TYPE_INFO(0, source, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_arrayToList, 0, 1, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, source, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkObjectPropertyHandlers, 0, 0, IS_VOID, 0)
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, lazy, IS_OBJECT, 1, "null")
@@ -442,7 +485,16 @@ ZEND_FUNCTION(MyPHPExt_Test_typedArgument);
 ZEND_FUNCTION(MyPHPExt_Test_checkStringArguments);
 ZEND_FUNCTION(MyPHPExt_Test_checkZvalStrings);
 ZEND_FUNCTION(MyPHPExt_Test_checkStringWriteFailure);
+ZEND_FUNCTION(MyPHPExt_Test_checkZendStrings);
+ZEND_FUNCTION(MyPHPExt_Test_objectView);
+ZEND_FUNCTION(MyPHPExt_Test_readObjectNative);
+ZEND_FUNCTION(MyPHPExt_Test_writeObjectNative);
+ZEND_FUNCTION(MyPHPExt_Test_objectDimension);
+ZEND_FUNCTION(MyPHPExt_Test_checkObjectViews);
 ZEND_FUNCTION(MyPHPExt_Test_checkArrayCallbacks);
+ZEND_FUNCTION(MyPHPExt_Test_checkArrayHashTable);
+ZEND_FUNCTION(MyPHPExt_Test_isArrayList);
+ZEND_FUNCTION(MyPHPExt_Test_arrayToList);
 ZEND_FUNCTION(MyPHPExt_Test_checkObjectPropertyHandlers);
 ZEND_FUNCTION(MyPHPExt_Test_checkObjectCreation);
 ZEND_FUNCTION(MyPHPExt_Test_separateArray);
@@ -640,9 +692,54 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkStringWriteFailure"), zif_MyPHPExt_Test_checkStringWriteFailure, arginfo_MyPHPExt_Test_checkStringWriteFailure, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkZendStrings"), zif_MyPHPExt_Test_checkZendStrings, arginfo_MyPHPExt_Test_checkZendStrings, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkZendStrings"), zif_MyPHPExt_Test_checkZendStrings, arginfo_MyPHPExt_Test_checkZendStrings, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "objectView"), zif_MyPHPExt_Test_objectView, arginfo_MyPHPExt_Test_objectView, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "objectView"), zif_MyPHPExt_Test_objectView, arginfo_MyPHPExt_Test_objectView, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "readObjectNative"), zif_MyPHPExt_Test_readObjectNative, arginfo_MyPHPExt_Test_readObjectNative, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "readObjectNative"), zif_MyPHPExt_Test_readObjectNative, arginfo_MyPHPExt_Test_readObjectNative, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "writeObjectNative"), zif_MyPHPExt_Test_writeObjectNative, arginfo_MyPHPExt_Test_writeObjectNative, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "writeObjectNative"), zif_MyPHPExt_Test_writeObjectNative, arginfo_MyPHPExt_Test_writeObjectNative, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "objectDimension"), zif_MyPHPExt_Test_objectDimension, arginfo_MyPHPExt_Test_objectDimension, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "objectDimension"), zif_MyPHPExt_Test_objectDimension, arginfo_MyPHPExt_Test_objectDimension, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkObjectViews"), zif_MyPHPExt_Test_checkObjectViews, arginfo_MyPHPExt_Test_checkObjectViews, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkObjectViews"), zif_MyPHPExt_Test_checkObjectViews, arginfo_MyPHPExt_Test_checkObjectViews, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArrayCallbacks"), zif_MyPHPExt_Test_checkArrayCallbacks, arginfo_MyPHPExt_Test_checkArrayCallbacks, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArrayCallbacks"), zif_MyPHPExt_Test_checkArrayCallbacks, arginfo_MyPHPExt_Test_checkArrayCallbacks, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArrayHashTable"), zif_MyPHPExt_Test_checkArrayHashTable, arginfo_MyPHPExt_Test_checkArrayHashTable, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArrayHashTable"), zif_MyPHPExt_Test_checkArrayHashTable, arginfo_MyPHPExt_Test_checkArrayHashTable, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "isArrayList"), zif_MyPHPExt_Test_isArrayList, arginfo_MyPHPExt_Test_isArrayList, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "isArrayList"), zif_MyPHPExt_Test_isArrayList, arginfo_MyPHPExt_Test_isArrayList, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "arrayToList"), zif_MyPHPExt_Test_arrayToList, arginfo_MyPHPExt_Test_arrayToList, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "arrayToList"), zif_MyPHPExt_Test_arrayToList, arginfo_MyPHPExt_Test_arrayToList, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkObjectPropertyHandlers"), zif_MyPHPExt_Test_checkObjectPropertyHandlers, arginfo_MyPHPExt_Test_checkObjectPropertyHandlers, 0, NULL, NULL)

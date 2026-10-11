@@ -1,6 +1,7 @@
 const phpz = @import("../root.zig");
 const c = phpz.c;
 const globals = phpz.globals;
+const assert = @import("std").debug.assert;
 
 pub const String = opaque {
     /// Create an empty string.
@@ -26,6 +27,14 @@ pub const String = opaque {
         if (str.len == 0) return empty();
         if (str.len == 1) return char(str[0]);
         return @ptrCast(c.zend_string_init(str.ptr, str.len, persistent));
+    }
+
+    /// Allocate owned storage with uninitialized bytes and a trailing NUL.
+    /// Fill the bytes before use; release() when done.
+    pub fn alloc(length: usize, persistent: bool) *String {
+        const result: *c.zend_string = c.zend_string_alloc(length, persistent);
+        result.val()[length] = 0;
+        return .from(result);
     }
 
     /// Create a string from an existing zend_string pointer.
@@ -67,6 +76,15 @@ pub const String = opaque {
         return self.cstr()[0..self.len() :0];
     }
 
+    /// Borrow writable bytes; requires an exclusively owned, non-interned string.
+    /// Clears the hash and UTF-8 flag. Preserve the trailing NUL; finish writing
+    /// before hashing, sharing or resizing. Use separate() for shared strings.
+    pub fn mutableSlice(self: *String) [:0]u8 {
+        assert(!self.isInterned() and self.refcount() == 1);
+        c.zend_string_forget_hash_val(self.ptr());
+        return self.ptr().val()[0..self.len() :0];
+    }
+
     /// Check if string is empty
     pub inline fn isEmpty(self: *String) bool {
         return self.len() == 0;
@@ -77,6 +95,46 @@ pub const String = opaque {
     /// Ownership: caller owns the returned reference; call `release()` when done.
     pub fn copy(self: *String) *String {
         return .from(c.zend_string_copy(self.ptr()));
+    }
+
+    /// Copy the bytes, or reuse an interned string. Source is borrowed;
+    /// caller owns the result, which may still be interned and read-only.
+    pub fn dupe(self: *String, persistent: bool) *String {
+        return .from(c.zend_string_dup(self.ptr(), persistent));
+    }
+
+    /// Consume one reference and return writable storage with its hash cleared.
+    /// Copies interned/shared strings; reuses unique strings. Replace the old
+    /// pointer with the result. For non-interned inputs, persistent must match.
+    pub fn separate(self: *String, persistent: bool) *String {
+        self.assertAllocation(persistent);
+        return .from(c.zend_string_separate(self.ptr(), persistent));
+    }
+
+    /// Grow to length, leaving added bytes uninitialized and setting a trailing NUL.
+    /// Consumes one reference; replace the old pointer with the result.
+    /// Allocation rules follow separate(); length must be >= the current length.
+    pub fn extend(self: *String, length: usize, persistent: bool) *String {
+        self.assertAllocation(persistent);
+        assert(length >= self.len());
+        const result: *c.zend_string = c.zend_string_extend(self.ptr(), length, persistent);
+        result.val()[length] = 0;
+        return .from(result);
+    }
+
+    /// Shrink to length and set a trailing NUL. Consumes one reference;
+    /// replace the old pointer with the result. Allocation rules follow separate();
+    /// length must be <= the current length.
+    pub fn truncate(self: *String, length: usize, persistent: bool) *String {
+        self.assertAllocation(persistent);
+        assert(length <= self.len());
+        const result: *c.zend_string = c.zend_string_truncate(self.ptr(), length, persistent);
+        result.val()[length] = 0;
+        return .from(result);
+    }
+
+    fn assertAllocation(self: *String, persistent: bool) void {
+        assert(self.isInterned() or ((c.GC_FLAGS(self.ptr()) & c.IS_STR_PERSISTENT) != 0) == persistent);
     }
 
     /// Concatenate two strings.
@@ -124,9 +182,9 @@ pub const String = opaque {
         return c.zend_string_equals(self.ptr(), other.ptr());
     }
 
-    /// Calculate string hash
+    /// Get the cached string hash, calculating it only when absent.
     pub fn hash(self: *String) u64 {
-        return c.zend_string_hash_func(self.ptr());
+        return c.zend_string_hash_val(self.ptr());
     }
 
     /// Check if string starts with a prefix
@@ -139,21 +197,21 @@ pub const String = opaque {
         return c.zend_string_starts_with(self.ptr(), prefix.ptr());
     }
 
-    /// Get refcount
+    /// Get the logical refcount (one for interned strings).
     pub inline fn refcount(self: *String) u32 {
-        return c.zend_gc_refcount(&self.ptr().gc);
+        return c.zend_string_refcount(self.ptr());
     }
 
     /// Increment refcount.
     ///
     /// Ownership: caller owns the added reference and must release/delref it.
     pub fn addref(self: *String) void {
-        _ = c.zend_gc_addref(&self.ptr().gc);
+        _ = c.zend_string_addref(self.ptr());
     }
 
-    /// Decrement refcount.
+    /// Decrement refcount without freeing; a no-op for interned strings.
     pub fn delref(self: *String) void {
-        _ = c.zend_gc_delref(&self.ptr().gc);
+        _ = c.zend_string_delref(self.ptr());
     }
 
     /// Check if string is interned

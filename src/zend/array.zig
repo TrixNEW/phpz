@@ -2,6 +2,7 @@ const std = @import("std");
 const c = @import("../root.zig").c;
 const errors = @import("../errors.zig");
 const Zval = @import("../zval.zig").Zval;
+const String = @import("string.zig").String;
 
 pub const Array = opaque {
     pub const Error = error{
@@ -57,6 +58,19 @@ pub const Array = opaque {
         return self.len() == 0;
     }
 
+    /// Check for consecutive integer keys from zero, in iteration order.
+    /// Empty arrays are lists.
+    pub fn isList(self: *Array) bool {
+        return c.zend_array_is_list(self.ptr());
+    }
+
+    /// Grow capacity without changing elements; never shrinks.
+    /// Preserves packed/mixed layout; initializes unused storage as mixed.
+    /// Requires mutable, uniquely owned storage; may invalidate entry pointers/iterators.
+    pub fn extend(self: *Array, capacity: u32) void {
+        c.zend_hash_extend(self.ptr(), capacity, (self.ptr().u.flags & c.HASH_FLAG_PACKED) != 0);
+    }
+
     /// Clear all elements
     pub fn clear(self: *Array) void {
         c.zend_hash_clean(self.ptr());
@@ -67,6 +81,12 @@ pub const Array = opaque {
     /// Ownership: caller owns the returned array; call `release()` when done.
     pub fn dupe(self: *Array) *Array {
         return @ptrCast(c.zend_array_dup(self.ptr()));
+    }
+
+    /// Shallow-copy values into an owned list with keys starting at zero.
+    /// Unwraps single-owner PHP references. Source is borrowed; release() the result.
+    pub fn toList(self: *Array) *Array {
+        return @ptrCast(c.zend_array_to_list(self.ptr()));
     }
 
     /// Add or update a value by string key.
@@ -84,6 +104,18 @@ pub const Array = opaque {
     /// contents. The returned pointer is borrowed from the array.
     pub fn add(self: *Array, key: []const u8, value: *c.zval) ?*c.zval {
         return c.zend_hash_str_add(self.ptr(), key.ptr, key.len, value);
+    }
+
+    /// Like update(), with a borrowed Zend string key retained on insertion.
+    /// No numeric-string conversion. Requires mutable, uniquely owned storage.
+    pub fn updateStr(self: *Array, key: *String, value: *c.zval) ?*c.zval {
+        return c.zend_hash_update(self.ptr(), key.ptr(), value);
+    }
+
+    /// Like updateStr(), but returns null if the key exists and leaves value owned
+    /// by the caller. On success, transfers value contents and returns a borrowed slot.
+    pub fn addStr(self: *Array, key: *String, value: *c.zval) ?*c.zval {
+        return c.zend_hash_add(self.ptr(), key.ptr(), value);
     }
 
     /// Add or update a value by index.
@@ -111,6 +143,49 @@ pub const Array = opaque {
         return c.zend_hash_next_index_insert(self.ptr(), value);
     }
 
+    /// Store and return an IS_PTR by string key, without retaining its pointee.
+    /// Keep the pointee alive; empty()/init() tables do not free it, while wrapped
+    /// tables use their configured destructor. Requires a mutable, uniquely owned
+    /// internal table; do not expose IS_PTR values to PHP.
+    pub fn updatePtr(self: *Array, comptime T: type, key: []const u8, value: *T) *T {
+        return @ptrCast(@alignCast(c.zend_hash_str_update_ptr(self.ptr(), key.ptr, key.len, value).?));
+    }
+
+    /// Like updatePtr(), but returns null without changes if the key exists.
+    pub fn addPtr(self: *Array, comptime T: type, key: []const u8, value: *T) ?*T {
+        const result = c.zend_hash_str_add_ptr(self.ptr(), key.ptr, key.len, value);
+        return if (result != null) @ptrCast(@alignCast(result)) else null;
+    }
+
+    /// Like updatePtr(), with a Zend string key retained on insertion.
+    pub fn updateStrPtr(self: *Array, comptime T: type, key: *String, value: *T) *T {
+        return @ptrCast(@alignCast(c.zend_hash_update_ptr(self.ptr(), key.ptr(), value).?));
+    }
+
+    /// Like addPtr(), with a Zend string key retained on insertion.
+    pub fn addStrPtr(self: *Array, comptime T: type, key: *String, value: *T) ?*T {
+        const result = c.zend_hash_add_ptr(self.ptr(), key.ptr(), value);
+        return if (result != null) @ptrCast(@alignCast(result)) else null;
+    }
+
+    /// Like updatePtr(), keyed by index.
+    pub fn updateIndexPtr(self: *Array, comptime T: type, index: isize, value: *T) *T {
+        return @ptrCast(@alignCast(c.zend_hash_index_update_ptr(self.ptr(), @bitCast(index), value).?));
+    }
+
+    /// Like addPtr(), keyed by index.
+    pub fn addIndexPtr(self: *Array, comptime T: type, index: isize, value: *T) ?*T {
+        const result = c.zend_hash_index_add_ptr(self.ptr(), @bitCast(index), value);
+        return if (result != null) @ptrCast(@alignCast(result)) else null;
+    }
+
+    /// Append an internal pointer at the next index; returns null on failure.
+    /// Ownership and table requirements follow updatePtr().
+    pub fn appendPtr(self: *Array, comptime T: type, value: *T) ?*T {
+        const result = c.zend_hash_next_index_insert_ptr(self.ptr(), value);
+        return if (result != null) @ptrCast(@alignCast(result)) else null;
+    }
+
     /// Find a value by string key.
     ///
     /// Ownership: borrowed zval pointer owned by the array; addref/copy before
@@ -119,11 +194,32 @@ pub const Array = opaque {
         return c.zend_hash_str_find(self.ptr(), key.ptr, key.len);
     }
 
-    /// Find a pointer stored under a string key.
-    ///
-    /// Ownership: borrowed pointer owned by the array.
+    /// Like find(), with a borrowed Zend string key; no numeric-string conversion.
+    pub fn findStr(self: *Array, key: *String) ?*c.zval {
+        return c.zend_hash_find(self.ptr(), key.ptr());
+    }
+
+    /// Like find(), unwrapping PHP references but not IS_INDIRECT.
+    /// The result is borrowed; keep its owner and entry valid while using it.
+    pub fn findDeref(self: *Array, key: []const u8) ?*c.zval {
+        return c.zend_hash_str_find_deref(self.ptr(), key.ptr, key.len);
+    }
+
+    /// Like findDeref(), with a borrowed Zend string key.
+    pub fn findStrDeref(self: *Array, key: *String) ?*c.zval {
+        return c.zend_hash_find_deref(self.ptr(), key.ptr());
+    }
+
+    /// Find an IS_PTR pointing to T, without retaining it.
+    /// Pointee ownership follows updatePtr().
     pub fn findPtr(self: *Array, comptime T: type, key: []const u8) ?*T {
         const value = c.zend_hash_str_find_ptr(self.ptr(), key.ptr, key.len);
+        return if (value != null) @ptrCast(@alignCast(value)) else null;
+    }
+
+    /// Like findPtr(), with a borrowed Zend string key.
+    pub fn findStrPtr(self: *Array, comptime T: type, key: *String) ?*T {
+        const value = c.zend_hash_find_ptr(self.ptr(), key.ptr());
         return if (value != null) @ptrCast(@alignCast(value)) else null;
     }
 
@@ -135,9 +231,25 @@ pub const Array = opaque {
         return c.zend_hash_index_find(self.ptr(), @bitCast(index));
     }
 
+    /// Like findDeref(), keyed by index.
+    pub fn findIndexDeref(self: *Array, index: isize) ?*c.zval {
+        return c.zend_hash_index_find_deref(self.ptr(), @bitCast(index));
+    }
+
+    /// Like findPtr(), keyed by index.
+    pub fn findIndexPtr(self: *Array, comptime T: type, index: isize) ?*T {
+        const value = c.zend_hash_index_find_ptr(self.ptr(), @bitCast(index));
+        return if (value != null) @ptrCast(@alignCast(value)) else null;
+    }
+
     /// Check if a string key exists
     pub fn has(self: *Array, key: []const u8) bool {
         return self.find(key) != null;
+    }
+
+    /// Check whether a Zend string key exists, including null values.
+    pub fn hasStr(self: *Array, key: *String) bool {
+        return self.findStr(key) != null;
     }
 
     /// Check if an index exists
@@ -152,6 +264,14 @@ pub const Array = opaque {
         }
     }
 
+    /// Delete by a borrowed Zend string key, destroying the stored value.
+    /// Requires mutable, uniquely owned storage.
+    pub fn deleteStr(self: *Array, key: *String) Error!void {
+        if (c.zend_hash_del(self.ptr(), key.ptr()) != c.SUCCESS) {
+            return Error.NotFound;
+        }
+    }
+
     /// Delete a value by index
     pub fn deleteIndex(self: *Array, index: isize) Error!void {
         if (c.zend_hash_index_del(self.ptr(), @bitCast(index)) != c.SUCCESS) {
@@ -159,7 +279,20 @@ pub const Array = opaque {
         }
     }
 
-    /// Rehash the array (reindex)
+    /// Find a slot or insert PHP null; retains the key without numeric conversion.
+    /// Requires mutable, uniquely owned storage. The slot is borrowed; release its
+    /// contents before overwriting it, and do not keep it across table mutations.
+    pub fn lookupStr(self: *Array, key: *String) *c.zval {
+        return c.zend_hash_lookup(self.ptr(), key.ptr()).?;
+    }
+
+    /// Like lookupStr(), keyed by index.
+    pub fn lookupIndex(self: *Array, index: isize) *c.zval {
+        return c.zend_hash_index_lookup(self.ptr(), @bitCast(index)).?;
+    }
+
+    /// Rebuild the hash index and compact holes, preserving keys.
+    /// Requires a mutable, uniquely owned mixed table; may invalidate entry pointers/iterators.
     pub fn rehash(self: *Array) void {
         c.zend_hash_rehash(self.ptr());
     }
@@ -232,6 +365,18 @@ pub const Array = opaque {
         if (errors.hasException()) return error.PhpException;
     }
 
+    /// Like apply(), in reverse order; values are borrowed and removals are not rolled back.
+    /// Removal requires mutable, uniquely owned storage. Do not otherwise invalidate entries.
+    pub fn reverseApply(self: *Array, apply_fn: fn (*c.zval) ApplyResult) errors.Exception!void {
+        const Cb = struct {
+            fn cb(zv: ?*c.zval) callconv(.c) c_int {
+                return @backingInt(apply_fn(zv.?));
+            }
+        };
+        c.zend_hash_reverse_apply(self.ptr(), Cb.cb);
+        if (errors.hasException()) return error.PhpException;
+    }
+
     /// Apply a callback to each element, passing a user-provided argument pointer.
     /// Callback control flow and exception handling follow apply().
     pub fn applyWithArg(
@@ -271,16 +416,16 @@ pub const Array = opaque {
         return c.zend_gc_refcount(&self.ptr().gc);
     }
 
-    /// Increment refcount.
+    /// Increment refcount; a no-op for immutable arrays.
     ///
     /// Ownership: caller owns the added reference and must release/delref it.
     pub fn addref(self: *Array) void {
-        _ = c.zend_gc_addref(&self.ptr().gc);
+        c.zend_gc_try_addref(&self.ptr().gc);
     }
 
-    /// Decrement refcount.
+    /// Decrement refcount without freeing; a no-op for immutable arrays.
     pub fn delref(self: *Array) void {
-        _ = c.zend_gc_delref(&self.ptr().gc);
+        c.zend_gc_try_delref(&self.ptr().gc);
     }
 
     /// Check if array is immutable

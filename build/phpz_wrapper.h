@@ -141,6 +141,11 @@ static zend_always_inline zval *phpz_hash_table_get_ar_packed(HashTable *ht) {
     return ht->arPacked;
 }
 
+/* zend_release_properties is a statement macro before PHP 8.6. */
+static zend_always_inline void phpz_release_properties(HashTable *properties) {
+    zend_release_properties(properties);
+}
+
 static zend_always_inline void phpz_class_entry_set_create_object(zend_class_entry *ce, zend_object* (*handler)(zend_class_entry *)) {
     ce->create_object = handler;
 }
