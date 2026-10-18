@@ -201,8 +201,8 @@ if (is_readable('/proc/cpuinfo') && preg_match('/model name\s*:\s*(.+)/', (strin
 $meta = [
     'date' => date(DATE_ATOM),
     'php' => PHP_VERSION,
-    'zts' => PHP_ZTS === 1,
-    'debug' => PHP_DEBUG === 1,
+    'zts' => (bool) PHP_ZTS,
+    'debug' => (bool) PHP_DEBUG,
     'opcache' => function_exists('opcache_get_status') && (opcache_get_status(false)['opcache_enabled'] ?? false),
     'os' => php_uname(),
     'cpu' => $cpuModel,
