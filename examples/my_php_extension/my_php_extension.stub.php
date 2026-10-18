@@ -226,6 +226,8 @@ namespace MyPHPExt\Test {
     function arrayToList(array $source): array {}
     function iterateArray(array $values): array {}
     function checkTsrmCache(): bool {}
+    function lookupKey(array $values, string $key, bool $symtable): mixed {}
+    function storeKey(array $values, string $key, mixed $value): array {}
     function iterateWhileMutating(): array {}
     function buildList(int $count, int $capacity, mixed $value): array {}
     function checkObjectPropertyHandlers(?object $lazy = null): void {}
@@ -305,6 +307,8 @@ namespace MyPHPExt\Test {
     function allocatorBailout(): array {}
 
     function allocatorAlignment(): bool {}
+
+    function nativeOutOfMemory(): void {}
 
     function guardResources(string $label, callable $callback, bool $fail = false): void {}
 

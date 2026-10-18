@@ -1,5 +1,6 @@
 const std = @import("std");
 const c = @import("../c.zig").c;
+const globals = @import("../globals.zig");
 
 pub const Error = error{ZendBailout};
 const RawCallback = *const fn (?*anyopaque) callconv(.c) void;
@@ -15,6 +16,20 @@ fn Result(comptime Callback: type) type {
 pub inline fn raise() noreturn {
     c.phpz_zend_bailout();
     unreachable;
+}
+
+/// Resume Zend's bailout for error.ZendBailout and error.OutOfMemory at a PHP
+/// boundary, after Zig cleanup has run. An OutOfMemory that PHP did not report
+/// itself, e.g. from a native allocator, becomes a fatal error instead of a silent exit.
+pub fn propagate(err: anyerror) void {
+    if (err == error.ZendBailout) raise();
+    if (err == error.OutOfMemory) {
+        @branchHint(.cold);
+        // php_allocator failures already reported a fatal error and bailed out.
+        if (globals.compiler().ptr().unclean_shutdown) raise();
+        c.zend_error_noreturn(c.E_ERROR, "Out of memory");
+        unreachable;
+    }
 }
 
 inline fn runRaw(callback: RawCallback, context: ?*anyopaque) Error!void {

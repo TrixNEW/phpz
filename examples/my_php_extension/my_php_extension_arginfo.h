@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 36c687ef21040184c0c24fde4541777e2d1e7b30 */
+ * Stub hash: 8a498b819cbf18c6a731d90fd650374ba73410b8 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -149,6 +149,18 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_iterateArray, 0, 1
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkTsrmCache, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_lookupKey, 0, 3, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, values, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, key, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, symtable, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_storeKey, 0, 3, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, values, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, key, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_iterateWhileMutating, 0, 0, IS_ARRAY, 0)
@@ -307,6 +319,8 @@ ZEND_END_ARG_INFO()
 #define arginfo_MyPHPExt_Test_allocatorBailout arginfo_MyPHPExt_Test_iterateWhileMutating
 
 #define arginfo_MyPHPExt_Test_allocatorAlignment arginfo_MyPHPExt_Test_checkTsrmCache
+
+#define arginfo_MyPHPExt_Test_nativeOutOfMemory arginfo_hello
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_guardResources, 0, 2, IS_VOID, 0)
 	ZEND_ARG_TYPE_INFO(0, label, IS_STRING, 0)
@@ -515,6 +529,8 @@ ZEND_FUNCTION(MyPHPExt_Test_isArrayList);
 ZEND_FUNCTION(MyPHPExt_Test_arrayToList);
 ZEND_FUNCTION(MyPHPExt_Test_iterateArray);
 ZEND_FUNCTION(MyPHPExt_Test_checkTsrmCache);
+ZEND_FUNCTION(MyPHPExt_Test_lookupKey);
+ZEND_FUNCTION(MyPHPExt_Test_storeKey);
 ZEND_FUNCTION(MyPHPExt_Test_iterateWhileMutating);
 ZEND_FUNCTION(MyPHPExt_Test_buildList);
 ZEND_FUNCTION(MyPHPExt_Test_checkObjectPropertyHandlers);
@@ -548,6 +564,7 @@ ZEND_FUNCTION(MyPHPExt_Test_makeFnClosure);
 ZEND_FUNCTION(MyPHPExt_Test_wrapClosure);
 ZEND_FUNCTION(MyPHPExt_Test_allocatorBailout);
 ZEND_FUNCTION(MyPHPExt_Test_allocatorAlignment);
+ZEND_FUNCTION(MyPHPExt_Test_nativeOutOfMemory);
 ZEND_FUNCTION(MyPHPExt_Test_guardResources);
 ZEND_FUNCTION(MyPHPExt_Test_superglobalsSnapshot);
 ZEND_FUNCTION(MyPHPExt_Test_mutateSuperglobals);
@@ -777,6 +794,16 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkTsrmCache"), zif_MyPHPExt_Test_checkTsrmCache, arginfo_MyPHPExt_Test_checkTsrmCache, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "lookupKey"), zif_MyPHPExt_Test_lookupKey, arginfo_MyPHPExt_Test_lookupKey, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "lookupKey"), zif_MyPHPExt_Test_lookupKey, arginfo_MyPHPExt_Test_lookupKey, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "storeKey"), zif_MyPHPExt_Test_storeKey, arginfo_MyPHPExt_Test_storeKey, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "storeKey"), zif_MyPHPExt_Test_storeKey, arginfo_MyPHPExt_Test_storeKey, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "iterateWhileMutating"), zif_MyPHPExt_Test_iterateWhileMutating, arginfo_MyPHPExt_Test_iterateWhileMutating, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "iterateWhileMutating"), zif_MyPHPExt_Test_iterateWhileMutating, arginfo_MyPHPExt_Test_iterateWhileMutating, 0)
@@ -940,6 +967,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "allocatorAlignment"), zif_MyPHPExt_Test_allocatorAlignment, arginfo_MyPHPExt_Test_allocatorAlignment, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "allocatorAlignment"), zif_MyPHPExt_Test_allocatorAlignment, arginfo_MyPHPExt_Test_allocatorAlignment, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "nativeOutOfMemory"), zif_MyPHPExt_Test_nativeOutOfMemory, arginfo_MyPHPExt_Test_nativeOutOfMemory, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "nativeOutOfMemory"), zif_MyPHPExt_Test_nativeOutOfMemory, arginfo_MyPHPExt_Test_nativeOutOfMemory, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "guardResources"), zif_MyPHPExt_Test_guardResources, arginfo_MyPHPExt_Test_guardResources, 0, NULL, NULL)

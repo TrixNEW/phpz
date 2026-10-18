@@ -435,7 +435,7 @@ pub fn createHandler(comptime func_desc: [:0]const u8, comptime func: anytype) H
                     }});
                 } else call(.{ .call = .from(execute_data.?), .retval = .from(return_value.?) }),
             ) catch |err| {
-                if (err == error.ZendBailout or err == error.OutOfMemory) zend.bailout.raise();
+                zend.bailout.propagate(err);
                 if (!errors.hasException()) {
                     errors.throwError(null, "%s at " ++ func_desc, .{@errorName(err).ptr}) catch {};
                 }

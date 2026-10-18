@@ -21,6 +21,12 @@ fn exhaustPhpAllocator(scope_defer: *bool, cleanup_defer: *bool, freed_blocks: *
     }
 }
 
+/// PHP: MyPHPExt\Test\nativeOutOfMemory(): void
+/// An allocation failure outside PHP's allocator, which PHP has not reported.
+pub fn nativeOutOfMemory() !void {
+    return error.OutOfMemory;
+}
+
 /// PHP: MyPHPExt\Test\allocatorAlignment(): bool
 pub fn allocatorAlignment() !bool {
     const std = @import("std");

@@ -277,7 +277,7 @@ fn Resolved(comptime T: type) type {
                             const rhs = if (op2) |p| Zval.from(p) else null;
                             const op: Operator = @fromBackingInt(opcode);
                             @as(anyerror!void, options.operate(op, lhs, rhs, Zval.from(result.?))) catch |err| {
-                                if (err == error.OutOfMemory or err == error.ZendBailout) zend.bailout.raise();
+                                zend.bailout.propagate(err);
                                 if (errors.hasException()) return c.FAILURE;
                                 const symbol = op.symbol();
                                 if (err == error.Unsupported) {
@@ -310,7 +310,7 @@ fn Resolved(comptime T: type) type {
                             const lhs = Zval.from(op1.?);
                             const rhs = Zval.from(op2.?);
                             const result = @as(anyerror!Comparison, options.compare(lhs, rhs)) catch |err| {
-                                if (err == error.OutOfMemory or err == error.ZendBailout) zend.bailout.raise();
+                                zend.bailout.propagate(err);
                                 if (!errors.hasException()) {
                                     if (err == error.Uncomparable) {
                                         errors.typeError("Cannot compare %s with %s", .{ lhs.getTypeName(), rhs.getTypeName() }) catch {};
@@ -647,7 +647,7 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
                 const intern = alloc(ce.?);
                 if (resolved.init) |initializer| {
                     intern.backingStorage().* = initializer() catch |err| {
-                        if (err == error.ZendBailout or err == error.OutOfMemory) zend.bailout.raise();
+                        zend.bailout.propagate(err);
                         if (!errors.hasException()) {
                             errors.throwError(null, "%s while initializing " ++ class_name, .{@errorName(err).ptr}) catch {};
                         }
@@ -675,7 +675,7 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
                 };
                 const cloner = resolved.clone orelse unreachable;
                 const cloned = cloner(source_backing) catch |err| {
-                    if (err == error.ZendBailout or err == error.OutOfMemory) zend.bailout.raise();
+                    zend.bailout.propagate(err);
                     if (!errors.hasException()) {
                         errors.throwError(null, "%s while cloning " ++ class_name, .{@errorName(err).ptr}) catch {};
                     }

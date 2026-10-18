@@ -89,7 +89,8 @@ pub const Array = opaque {
         return @ptrCast(c.zend_array_to_list(self.ptr()));
     }
 
-    /// Add or update a value by string key.
+    /// Add or update a value by raw string key. Numeric strings stay string keys,
+    /// unlike PHP's `$array["1"]`; use symtableUpdate() for PHP key semantics.
     ///
     /// Ownership: the array takes ownership of `value`'s zval contents. If
     /// `value` is borrowed and must remain independently owned, addref/copy it
@@ -186,12 +187,30 @@ pub const Array = opaque {
         return if (result != null) @ptrCast(@alignCast(result)) else null;
     }
 
-    /// Find a value by string key.
+    /// Find a value by raw string key. "1" does not match the integer key 1 that
+    /// PHP stores for `$array["1"]`; use symtableFind() for PHP key semantics.
     ///
     /// Ownership: borrowed zval pointer owned by the array; addref/copy before
     /// storing it beyond the array or mutating the table.
     pub fn find(self: *Array, key: []const u8) ?*c.zval {
         return c.zend_hash_str_find(self.ptr(), key.ptr, key.len);
+    }
+
+    /// Find a value like PHP's `$array[$key]`: canonical integer strings such as
+    /// "42" or "-1" address integer keys. Ownership follows find().
+    pub fn symtableFind(self: *Array, key: []const u8) ?*c.zval {
+        return c.zend_symtable_str_find(self.ptr(), key.ptr, key.len);
+    }
+
+    /// Add or update like PHP's `$array[$key] = $value`. Ownership follows update().
+    /// Requires mutable, uniquely owned storage.
+    pub fn symtableUpdate(self: *Array, key: []const u8, value: *c.zval) *c.zval {
+        return c.zend_symtable_str_update(self.ptr(), key.ptr, key.len, value).?;
+    }
+
+    /// Delete like PHP's `unset($array[$key])`, destroying the stored value.
+    pub fn symtableDelete(self: *Array, key: []const u8) Error!void {
+        if (c.zend_symtable_str_del(self.ptr(), key.ptr, key.len) != c.SUCCESS) return Error.NotFound;
     }
 
     /// Like find(), with a borrowed Zend string key; no numeric-string conversion.
@@ -242,7 +261,7 @@ pub const Array = opaque {
         return if (value != null) @ptrCast(@alignCast(value)) else null;
     }
 
-    /// Check if a string key exists
+    /// Check if a raw string key exists; see find() for numeric strings.
     pub fn has(self: *Array, key: []const u8) bool {
         return self.find(key) != null;
     }
@@ -257,7 +276,7 @@ pub const Array = opaque {
         return self.findIndex(index) != null;
     }
 
-    /// Delete a value by string key
+    /// Delete a value by raw string key; see find() for numeric strings.
     pub fn delete(self: *Array, key: []const u8) Error!void {
         if (c.zend_hash_str_del(self.ptr(), key.ptr, key.len) != c.SUCCESS) {
             return Error.NotFound;
