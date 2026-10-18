@@ -21,6 +21,30 @@ fn exhaustPhpAllocator(scope_defer: *bool, cleanup_defer: *bool, freed_blocks: *
     }
 }
 
+/// PHP: MyPHPExt\Test\allocatorAlignment(): bool
+pub fn allocatorAlignment() !bool {
+    const std = @import("std");
+    const allocator = phpz.heap.php_allocator;
+    inline for (.{ 1, 8, 16, 32, 64, 4096 }) |alignment| {
+        for ([_]usize{ 1, 7, 24, 100, 3000, 5000, 3 * 1024 * 1024 }) |len| {
+            const block = try allocator.alignedAlloc(u8, .fromByteUnits(alignment), len);
+            try std.testing.expect(std.mem.isAligned(@intFromPtr(block.ptr), alignment));
+            @memset(block, 0xa5);
+            try std.testing.expect(allocator.resize(block, len / 2 + 1));
+            const grown = try allocator.realloc(block[0 .. len / 2 + 1], len * 2);
+            try std.testing.expect(std.mem.isAligned(@intFromPtr(grown.ptr), alignment));
+            try std.testing.expect(std.mem.allEqual(u8, grown[0 .. len / 2 + 1], 0xa5));
+            allocator.free(grown);
+        }
+    }
+    var list: std.ArrayList(u128) = .empty;
+    defer list.deinit(allocator);
+    for (0..1000) |i| try list.append(allocator, i);
+    try std.testing.expect(std.mem.isAligned(@intFromPtr(list.items.ptr), @alignOf(u128)));
+    try std.testing.expectEqual(@as(u128, 999), list.items[999]);
+    return true;
+}
+
 /// PHP: MyPHPExt\Test\allocatorBailout(): array
 pub fn allocatorBailout(ctx: phpz.Ctx) !void {
     try ctx.call.expectNoArgs();

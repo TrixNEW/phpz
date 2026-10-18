@@ -20,7 +20,7 @@ A Zig framework for building PHP extensions with PHP C API bindings.
 - **Native closures** — create PHP `Closure` values with `Function.createClosure()`, `closure.createFromHandler()`, or `closure.createFromFn()`.
 - **INI, phpinfo, and errors** — typed INI values, phpinfo helpers, PHP errors, exceptions, and bailout-safe cleanup.
 - **Observers** — function-call, error, and exception hooks for profiling and monitoring.
-- **Memory** — PHP-backed Zig allocator with optional debug leak traces.
+- **Memory** — PHP-backed Zig allocator for any alignment, with optional debug leak traces that are safe under ZTS.
 - **Build integration** — PHP C translation, extension linking, and platform-specific setup.
 - **PHP build system** — optional support for built-in and shared extensions. Pass `--with-php-build-system` to `phpz_skel.php`; see the [skeleton guide](./examples/skeleton/README.md#php-build-system).
 - **Cross-compilation** — build Windows x86_64 (MSVC) extensions from Linux; see [`scripts/build-windows.sh`](./scripts/build-windows.sh).
@@ -126,6 +126,16 @@ Check out the [`examples/`](./examples/) directory for complete working examples
    | Classes   | `register_class_*`        | MINIT       | Manual: `Class.register()` in `module_startup_fn` |
 
    > Functions are resolved from the module entry when the extension loads; constants are registered during MINIT via the auto-generated `register_{name}_symbols`. Classes require an explicit `Class.register()` call in `module_startup_fn` — this gives you control over registration order and the opportunity to configure `ObjectHandlers` or parent classes.
+
+## Threads
+
+Zend APIs, zvals, `php_allocator` and request memory belong to the PHP thread that is running the request.
+Native worker threads must not touch them, under NTS or ZTS.
+
+- Copy arguments into native memory (for example `std.heap.c_allocator`) before handing work to a thread, and
+  copy results into PHP values back on the PHP thread, as `ext-bedwire` does with its bounded rings.
+- Wake the PHP side through your own primitive (a pipe, eventfd or polled queue) and drain it from a PHP call.
+- Objects and module globals are per request thread under ZTS; do not share them across threads.
 
 ## Acknowledgements
 
