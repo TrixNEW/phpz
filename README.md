@@ -13,14 +13,15 @@ A Zig framework for building PHP extensions with PHP C API bindings.
 
 - **Modules** — extension metadata, lifecycle hooks, phpinfo, INI, globals, observers, and exports.
 - **[Stub integration](https://php.github.io/php-src/miscellaneous/stubs.html)** — arginfo, function entries, constants, attributes, class metadata, and arginfo checks.
-- **Functions and methods** — typed `Ctx` arguments, returns, nullable values, raw zvals, and PHP argument errors.
+- **Functions and methods** — typed `Ctx` arguments, returns, nullable values, raw zvals, and PHP argument errors. Scalar parameters follow ZPP exactly: weak-mode coercion, `strict_types`, int-to-float widening, null deprecations and Zend's own error messages.
 - **Classes and OOP** — bind Zig `struct` lifecycles to PHP objects, with class entries, methods, inheritance, interfaces, enums, exceptions, handlers, and optional operator overloading and comparison.
 - **Runtime state** — typed module globals, PHP/Zend globals, and superglobal access for NTS/ZTS builds.
-- **Zval and Zend APIs** — zval conversions, ownership helpers, arrays, strings, objects, callables, functions, and resources.
+- **Zval and Zend APIs** — zval conversions, ownership helpers, arrays (including `ListBuilder` for `ZEND_HASH_FILL_PACKED`-style construction and `symtable*` lookups with PHP key semantics), strings, objects, callables, functions, and resources.
 - **Native closures** — create PHP `Closure` values with `Function.createClosure()`, `closure.createFromHandler()`, or `closure.createFromFn()`.
 - **INI, phpinfo, and errors** — typed INI values, phpinfo helpers, PHP errors, exceptions, and bailout-safe cleanup.
 - **Observers** — function-call, error, and exception hooks for profiling and monitoring.
-- **Memory** — PHP-backed Zig allocator with optional debug leak traces.
+- **Memory** — PHP-backed Zig allocator for any alignment, with optional debug leak traces that are safe under ZTS.
+- **Performance** — handlers and methods run within noise of equivalent C and C++ extensions on most workloads, and ahead on packed array iteration; see [`benchmark`](./benchmark/README.md).
 - **Build integration** — PHP C translation, extension linking, and platform-specific setup.
 - **PHP build system** — optional support for built-in and shared extensions. Pass `--with-php-build-system` to `phpz_skel.php`; see the [skeleton guide](./examples/skeleton/README.md#php-build-system).
 - **Cross-compilation** — build Windows x86_64 (MSVC) extensions from Linux; see [`scripts/build-windows.sh`](./scripts/build-windows.sh).
@@ -119,13 +120,45 @@ Check out the [`examples/`](./examples/) directory for complete working examples
 2. **Compile-time** — `phpz.function()` and `phpz.functions()` export `zif_*` wrappers, `phpz.Class()` creates wrapper types, and `phpz.module()` exports `get_module()` for the dynamic loader.
 3. **Runtime** — PHP loads `.so` → `get_module()`:
 
-   | What      | Registered by             | When        | How                                               |
-   | --------- | ------------------------- | ----------- | ------------------------------------------------- |
-   | Functions | `ext_functions`           | Module init | Auto: set in module entry struct                  |
-   | Constants | `register_{name}_symbols` | MINIT       | Auto: called by `module_startup_func`             |
-   | Classes   | `register_class_*`        | MINIT       | Manual: `Class.register()` in `module_startup_fn` |
+   | What      | Registered by             | When        | How                                                   |
+   | --------- | ------------------------- | ----------- | ----------------------------------------------------- |
+   | Functions | `ext_functions`           | Module init | Auto: set in module entry struct                      |
+   | Constants | `register_{name}_symbols` | MINIT       | Auto: called by `module_startup_func`                 |
+   | Classes   | `register_class_*`        | MINIT       | Auto: `.classes` of `phpz.module`, in the given order |
 
-   > Functions are resolved from the module entry when the extension loads; constants are registered during MINIT via the auto-generated `register_{name}_symbols`. Classes require an explicit `Class.register()` call in `module_startup_fn` — this gives you control over registration order and the opportunity to configure `ObjectHandlers` or parent classes.
+   > Functions are resolved from the module entry when the extension loads; constants are registered during MINIT via the auto-generated `register_{name}_symbols`. Classes listed in `.classes` are registered in order before `module_startup_fn`, so list parents and interfaces first; use a class's `.register` option to supply them.
+
+## Bailouts
+
+A Zend bailout (a fatal error, including the memory limit) is a `longjmp`: Zig `defer` and `errdefer`
+between the bailout and the boundary that catches it do not run.
+
+- `php_allocator` and the `try*` APIs (`tryCall`, `tryNew`, `tryEval`, ...) catch the bailout and return
+  `error.ZendBailout` or `error.OutOfMemory`, so your `errdefer` runs. Propagate those errors; phpz resumes the
+  bailout when the handler returns. PHP has already reported the fatal error and the request will end.
+- Other Zend calls can bail out directly. Keep native resources that must be released on bailout in a
+  `GuardCtx` scope, or in objects PHP destroys at request shutdown.
+- An `error.OutOfMemory` from a non-PHP allocator becomes a PHP fatal "Out of memory" error.
+
+## Threads
+
+Zend APIs, zvals, `php_allocator` and request memory belong to the PHP thread that is running the request.
+Native worker threads must not touch them, under NTS or ZTS.
+
+- Copy arguments into native memory (for example `std.heap.c_allocator`) before handing work to a thread, and
+  copy results into PHP values back on the PHP thread, as `ext-bedwire` does with its bounded rings.
+- Wake the PHP side through your own primitive (a pipe, eventfd or polled queue) and drain it from a PHP call.
+- Objects and module globals are per request thread under ZTS; do not share them across threads.
+
+## Migrating from earlier versions
+
+- Typed scalar parameters now coerce like ZPP in coercive mode (`'12'` for `int`, `1` for `float`, Stringable for
+  `string`), and null passed to a non-nullable scalar raises PHP's deprecation instead of a TypeError. Use
+  `declare(strict_types=1)` in PHP, or a `.mixed` parameter (optionally with `one_of`) in Zig, when an exact type is required.
+  Type errors now use Zend's wording, such as `must be of type ?int, string given`.
+- A failed `.init` or `.clone` no longer runs `__destruct` on the half-built object.
+- `zend.Array.find`, `update`, `delete` and `has` stay raw string lookups; use the new `symtable*` variants for
+  PHP's `$array[$key]` semantics.
 
 ## Acknowledgements
 
