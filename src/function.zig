@@ -354,7 +354,8 @@ pub fn invoke(comptime func: anytype, ctx: anytype, receiver: anytype, comptime 
         }
         break :blk arg_specs;
     };
-    var resolved_callables: [callable_count]zend.Callable = @splat(.nil);
+    // Filled by a successful parse before any pointer reaches the handler.
+    var resolved_callables: [callable_count]zend.Callable = undefined;
     if (comptime php_params_count == 0) {
         if (comptime !has_context) {
             if (comptime variadic) try ctx.call.expectNoArgs() else if (ctx.call.argCount() != 0) return errors.wrongParametersNone();
