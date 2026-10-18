@@ -55,7 +55,7 @@ var tcb_offset: usize = 0;
 
 /// Look up PHP's TLS layout. Called at module startup, before other threads run PHP.
 pub fn detectTcbOffset() void {
-    if (comptime zts and tcb_supported) tcb_offset = c.tsrm_get_ls_cache_tcb_offset();
+    if (comptime zts and tcb_supported) @atomicStore(usize, &tcb_offset, c.tsrm_get_ls_cache_tcb_offset(), .monotonic);
 }
 
 inline fn readTcb(offset: usize) ?*anyopaque {
@@ -76,7 +76,8 @@ inline fn readTcb(offset: usize) ?*anyopaque {
 pub inline fn localStorage() *anyopaque {
     if (comptime !zts) unreachable else {
         if (comptime tcb_supported) {
-            if (tcb_offset != 0) if (readTcb(tcb_offset)) |ls| return ls;
+            const offset = @atomicLoad(usize, &tcb_offset, .monotonic);
+            if (offset != 0) if (readTcb(offset)) |ls| return ls;
         }
         // Built-in extensions share PHP's own cache, which PHP keeps current.
         if (comptime !phpz_options.shared) return c.phpz_tsrm_ls_cache().?;
