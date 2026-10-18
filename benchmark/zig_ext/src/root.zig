@@ -138,7 +138,7 @@ fn arrayBuild(n: i64) !*zend.Array {
     if (n < 0 or n > max_build) return errors.argumentValueError(1, "must be between 0 and 16777216", .{});
     const count: u32 = @intCast(n);
     var list = zend.Array.ListBuilder.init(count);
-    for (0..count) |i| list.append(.int, @intCast(i));
+    for (0..count) |i| list.appendAssumeCapacity(.int, @intCast(i));
     return list.finish();
 }
 

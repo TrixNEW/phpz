@@ -121,7 +121,11 @@ pub fn iterateWhileMutating(ctx: phpz.Ctx) !void {
 pub fn buildList(count: u32, capacity: u32, value: *Zval) *Array {
     var builder = Array.ListBuilder.init(capacity);
     for (0..count) |i| {
-        if (i % 2 == 0) builder.append(.mixed, value.ptr()) else builder.append(.int, @intCast(i));
+        if (i < capacity) {
+            if (i % 2 == 0) builder.appendAssumeCapacity(.mixed, value.ptr()) else builder.appendAssumeCapacity(.int, @intCast(i));
+        } else {
+            if (i % 2 == 0) builder.append(.mixed, value.ptr()) else builder.append(.int, @intCast(i));
+        }
     }
     return builder.finish();
 }
