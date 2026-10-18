@@ -104,7 +104,7 @@ fn intToString(n: i64) *zend.String {
 fn strUpper(s: []const u8) *zend.String {
     const result = zend.String.alloc(s.len, false);
     const out = result.mutableSlice();
-    const lanes = std.simd.suggestVectorLength(u8) orelse 16;
+    const lanes = 16;
     const V = @Vector(lanes, u8);
     var i: usize = 0;
     while (i + lanes <= s.len) : (i += lanes) {
@@ -133,12 +133,9 @@ fn arraySumAssoc(arr: *zend.Array) i64 {
 fn arrayBuild(n: i64) !*zend.Array {
     if (n < 0 or n > max_build) return errors.argumentValueError(1, "must be between 0 and 16777216", .{});
     const count: u32 = @intCast(n);
-    const result = zend.Array.init(count);
-    for (0..count) |i| {
-        var value = Zval.raw.init(.int, @intCast(i));
-        _ = result.append(&value);
-    }
-    return result;
+    var list = zend.Array.ListBuilder.init(count);
+    for (0..count) |i| list.append(.int, @intCast(i));
+    return list.finish();
 }
 
 fn hashLookup(arr: *zend.Array, key: *zend.String) ?*Zval {
