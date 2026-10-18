@@ -47,8 +47,8 @@ fn efreeAt(memory: *anyopaque, address: usize) void {
     }
 }
 
-/// A wrapper around the PHP Memory Manager API which supports the full `Allocator` interface
-/// for alignments up to PHP's configured `ZEND_MM_ALIGNMENT`.
+/// A wrapper around the PHP Memory Manager API which supports the full `Allocator` interface.
+/// Alignments above PHP's `ZEND_MM_ALIGNMENT` are served by over-allocating.
 ///
 /// This allocator delegates all memory operations to PHP's internal memory manager (`emalloc`,
 /// `erealloc`, `efree`), ensuring that allocations are tracked and managed within the PHP
@@ -62,6 +62,11 @@ fn efreeAt(memory: *anyopaque, address: usize) void {
 /// fatal error and performs a Zend bailout. This allocator catches that bailout
 /// and reports allocation failure through Zig's allocator `null` path, which is
 /// surfaced as `error.OutOfMemory` by `std.mem.Allocator`.
+/// PHP has already raised a fatal error by then, so propagate OutOfMemory instead of
+/// recovering; phpz handlers resume the bailout once Zig cleanup has run.
+///
+/// Memory is request-scoped: never keep it past request shutdown or hand it to
+/// threads that PHP does not manage.
 pub const php_allocator: Allocator = .{
     .ptr = undefined,
     .vtable = &php_allocator_impl.vtable,
@@ -81,33 +86,45 @@ const php_allocator_impl = struct {
         .free = free,
     };
 
+    const mm_alignment: Alignment = .fromByteUnits(c.ZEND_MM_ALIGNMENT);
+
+    inline fn isOverAligned(alignment: Alignment) bool {
+        return alignment.compare(.gt, mm_alignment);
+    }
+
     fn alloc(context: *anyopaque, len: usize, alignment: Alignment, return_address: usize) ?[*]u8 {
         _ = context;
-        // Same as Zend MM allocator alignment.
-        std.debug.assert(alignment.compare(.lte, .fromByteUnits(c.ZEND_MM_ALIGNMENT)));
-        return @ptrCast(zend.bailout.run(emallocAt, .{ len, return_address }) catch return null);
+        if (!isOverAligned(alignment)) {
+            return @ptrCast(zend.bailout.run(emallocAt, .{ len, return_address }) catch return null);
+        }
+        // The base pointer is stored in the word just below the aligned address.
+        const size = std.math.add(usize, len, alignment.toByteUnits()) catch return null;
+        const base: usize = @intFromPtr(zend.bailout.run(emallocAt, .{ size, return_address }) catch return null);
+        const aligned = alignment.forward(base + @sizeOf(usize));
+        @as(*usize, @ptrFromInt(aligned - @sizeOf(usize))).* = base;
+        return @ptrFromInt(aligned);
     }
 
     fn resize(context: *anyopaque, memory: []u8, alignment: Alignment, new_len: usize, return_address: usize) bool {
         _ = context;
-        _ = memory;
         _ = alignment;
-        _ = new_len;
         _ = return_address;
-        return false;
+        return new_len <= memory.len;
     }
 
     fn remap(context: *anyopaque, memory: []u8, alignment: Alignment, new_len: usize, return_address: usize) ?[*]u8 {
         _ = context;
-        // Same as Zend MM allocator alignment.
-        std.debug.assert(alignment.compare(.lte, .fromByteUnits(c.ZEND_MM_ALIGNMENT)));
+        if (isOverAligned(alignment)) return null;
         return @ptrCast(zend.bailout.run(ereallocAt, .{ memory.ptr, new_len, return_address }) catch return null);
     }
 
     fn free(context: *anyopaque, memory: []u8, alignment: Alignment, return_address: usize) void {
         _ = context;
-        _ = alignment;
-        efreeAt(memory.ptr, return_address);
+        const base: *anyopaque = if (isOverAligned(alignment))
+            @ptrFromInt(@as(*const usize, @ptrFromInt(@intFromPtr(memory.ptr) - @sizeOf(usize))).*)
+        else
+            memory.ptr;
+        efreeAt(base, return_address);
     }
 
     test {
@@ -144,9 +161,15 @@ const DebugSourceLocation = if (c.ZEND_DEBUG == 1) struct {
     /// for allocations from the same call site (e.g. inside loops).
     var cache: std.AutoArrayHashMapUnmanaged(usize, DebugSourceLocation) = .{};
 
+    /// Guards storage, cache and DWARF state, which ZTS request threads share.
+    var mutex: std.Io.Mutex = .init;
+
     /// Captures a stack trace starting from `return_address`. Results are
     /// cached by return address to avoid repeated DWARF resolution.
     fn resolve(return_address: usize) DebugSourceLocation {
+        const io = std.Options.debug_io;
+        mutex.lockUncancelable(io);
+        defer mutex.unlock(io);
         if (cache.get(return_address)) |cached| return cached;
         var addr_buf: [max_trace_depth]usize = undefined;
         const st = std.debug.captureCurrentStackTrace(.{ .first_address = return_address }, &addr_buf);

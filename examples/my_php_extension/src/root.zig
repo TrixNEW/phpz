@@ -56,6 +56,7 @@ comptime {
         .@"MyPHPExt\\Test\\makeHandlerClosure" = closure_tests.makeHandlerClosure,
         .@"MyPHPExt\\Test\\makeFnClosure" = closure_tests.makeFnClosure,
         .@"MyPHPExt\\Test\\allocatorBailout" = bailout.allocatorBailout,
+        .@"MyPHPExt\\Test\\allocatorAlignment" = bailout.allocatorAlignment,
         .@"MyPHPExt\\Test\\guardResources" = guard_tests.guardResources,
         .@"MyPHPExt\\Test\\superglobalsSnapshot" = superglobals.superglobalsSnapshot,
         .@"MyPHPExt\\Test\\mutateSuperglobals" = superglobals.mutateSuperglobals,
