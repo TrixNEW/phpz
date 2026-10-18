@@ -66,6 +66,7 @@ comptime {
         .@"MyPHPExt\\Test\\collectReferenceArguments" = named_arguments.collectAll,
         .@"MyPHPExt\\Test\\invokeArguments" = named_arguments.invokeArguments,
         .@"MyPHPExt\\Test\\newObject" = class_new.newObject,
+        .@"MyPHPExt\\Test\\failNextFallible" = class_new.failNextFallible,
         .@"MyPHPExt\\Test\\cloneObject" = @import("testing/objects.zig").cloneObject,
         .@"MyPHPExt\\Test\\objectProperties" = @import("testing/objects.zig").objectProperties,
         .@"MyPHPExt\\Test\\hasObjectProperty" = @import("testing/objects.zig").hasObjectProperty,
