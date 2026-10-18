@@ -24,6 +24,14 @@ extern "C" {
 	ZEND_PARSE_PARAMETERS_END()
 #endif
 
+ZEND_BEGIN_MODULE_GLOBALS(bench_cpp)
+	zend_long counter;
+ZEND_END_MODULE_GLOBALS(bench_cpp)
+
+ZEND_DECLARE_MODULE_GLOBALS(bench_cpp)
+
+#define BENCH_CPP_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(bench_cpp, v)
+
 namespace {
 
 constexpr zend_long max_build = zend_long{1} << 24;
@@ -327,6 +335,30 @@ PHP_FUNCTION(bench_cpp_split)
 	add_next_index_stringl(return_value, input.data() + start, input.size() - start);
 }
 
+PHP_FUNCTION(bench_cpp_counter)
+{
+	ZEND_PARSE_PARAMETERS_NONE();
+
+	RETURN_LONG(++BENCH_CPP_G(counter));
+}
+
+PHP_FUNCTION(bench_cpp_invoke)
+{
+	zend_fcall_info fci;
+	zend_fcall_info_cache fcc;
+	zval *arg;
+
+	ZEND_PARSE_PARAMETERS_START(2, 2)
+		Z_PARAM_FUNC(fci, fcc)
+		Z_PARAM_ZVAL(arg)
+	ZEND_PARSE_PARAMETERS_END();
+
+	fci.retval = return_value;
+	fci.params = arg;
+	fci.param_count = 1;
+	zend_call_function(&fci, &fcc);
+}
+
 PHP_METHOD(BenchCppPoint, __construct)
 {
 	double x, y;
@@ -373,11 +405,20 @@ PHP_MINIT_FUNCTION(bench_cpp)
 	return SUCCESS;
 }
 
+PHP_GINIT_FUNCTION(bench_cpp)
+{
+#if defined(ZTS) && defined(COMPILE_DL_BENCH_CPP)
+	ZEND_TSRMLS_CACHE_UPDATE();
+#endif
+	bench_cpp_globals->counter = 0;
+}
+
 PHP_RINIT_FUNCTION(bench_cpp)
 {
 #if defined(ZTS) && defined(COMPILE_DL_BENCH_CPP)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
+	BENCH_CPP_G(counter) = 0;
 
 	return SUCCESS;
 }
@@ -399,7 +440,11 @@ zend_module_entry bench_cpp_module_entry = {
 	nullptr,
 	PHP_MINFO(bench_cpp),
 	PHP_BENCH_CPP_VERSION,
-	STANDARD_MODULE_PROPERTIES
+	PHP_MODULE_GLOBALS(bench_cpp),
+	PHP_GINIT(bench_cpp),
+	nullptr,
+	nullptr,
+	STANDARD_MODULE_PROPERTIES_EX
 };
 
 #ifdef COMPILE_DL_BENCH_CPP

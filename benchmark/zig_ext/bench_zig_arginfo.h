@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 7f24f0bd20674c77bd2642ee67dec5d9bdeb3e94 */
+ * Stub hash: 400cb02ff6d6240dd26d8ce0fd2036aad010ec9e */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_zig_empty, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -70,6 +70,14 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_zig_split, 0, 2, IS_ARRAY,
 	ZEND_ARG_TYPE_INFO(0, separator, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_zig_counter, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_zig_invoke, 0, 2, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, callback, IS_CALLABLE, 0)
+	ZEND_ARG_TYPE_INFO(0, arg, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_BenchZigPoint___construct, 0, 0, 2)
 	ZEND_ARG_TYPE_INFO(0, x, IS_DOUBLE, 0)
 	ZEND_ARG_TYPE_INFO(0, y, IS_DOUBLE, 0)
@@ -99,6 +107,8 @@ ZEND_FUNCTION(bench_zig_hash_lookup);
 ZEND_FUNCTION(bench_zig_array_identity);
 ZEND_FUNCTION(bench_zig_throw);
 ZEND_FUNCTION(bench_zig_split);
+ZEND_FUNCTION(bench_zig_counter);
+ZEND_FUNCTION(bench_zig_invoke);
 ZEND_METHOD(BenchZigPoint, __construct);
 ZEND_METHOD(BenchZigPoint, length);
 ZEND_METHOD(BenchZigPoint, translate);
@@ -120,6 +130,8 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_FE(bench_zig_array_identity, arginfo_bench_zig_array_identity)
 	ZEND_FE(bench_zig_throw, arginfo_bench_zig_throw)
 	ZEND_FE(bench_zig_split, arginfo_bench_zig_split)
+	ZEND_FE(bench_zig_counter, arginfo_bench_zig_counter)
+	ZEND_FE(bench_zig_invoke, arginfo_bench_zig_invoke)
 	ZEND_FE_END
 };
 

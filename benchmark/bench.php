@@ -72,6 +72,8 @@ $benchmarks = [
         'body' => '{f}_hash_lookup($arr, $key);',
     ],
     'array_identity' => ['desc' => 'Return arg array (refcount)', 'setup' => '$arr = range(1, 100);', 'body' => '{f}_array_identity($arr);'],
+    'globals' => ['desc' => 'Module globals read/write', 'body' => '{f}_counter();'],
+    'callback' => ['desc' => 'Call a PHP closure from native', 'setup' => '$fn = static fn ($x) => $x;', 'body' => '{f}_invoke($fn, $__i);'],
     'object_new' => ['desc' => 'new Point + destroy', 'body' => 'new {C}(1.0, 2.0);'],
     'method_call' => ['desc' => 'Method call, native read', 'setup' => '$p = new {C}(3.0, 4.0);', 'body' => '$p->length();'],
     'method_write' => ['desc' => 'Method call, native write', 'setup' => '$p = new {C}(3.0, 4.0);', 'body' => '$p->translate(0.5, -0.5);'],

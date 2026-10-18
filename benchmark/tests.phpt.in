@@ -32,6 +32,10 @@ try { $call('throw', 7); } catch (Exception $e) { var_dump($e->getMessage(), $e-
 var_dump($call('split', 'a,,b,c', ','), $call('split', 'abc', '::'), $call('split', '', ','));
 try { $call('split', 'abc', ''); } catch (ValueError $e) { echo $e->getMessage(), "\n"; }
 
+var_dump($call('counter'), $call('counter'));
+var_dump($call('invoke', fn ($x) => $x * 2, 21));
+try { $call('invoke', function () { throw new LogicException('from callback'); }, 1); } catch (LogicException $e) { echo $e->getMessage(), "\n"; }
+
 $class = '@CLASS@';
 $point = new $class(3.0, 4.0);
 var_dump($point->length());
@@ -110,6 +114,10 @@ array(1) {
   string(0) ""
 }
 @PREFIX@_split(): Argument #2 ($separator) cannot be empty
+int(1)
+int(2)
+int(42)
+from callback
 float(5)
 float(5)
 done

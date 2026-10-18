@@ -37,6 +37,10 @@ function bench_zig_throw(int $code): void {}
 
 function bench_zig_split(string $s, string $separator): array {}
 
+function bench_zig_counter(): int {}
+
+function bench_zig_invoke(callable $callback, mixed $arg): mixed {}
+
 final class BenchZigPoint
 {
     public function __construct(float $x, float $y) {}

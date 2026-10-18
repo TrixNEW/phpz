@@ -37,6 +37,10 @@ function bench_cpp_throw(int $code): void {}
 
 function bench_cpp_split(string $s, string $separator): array {}
 
+function bench_cpp_counter(): int {}
+
+function bench_cpp_invoke(callable $callback, mixed $arg): mixed {}
+
 final class BenchCppPoint
 {
     public function __construct(float $x, float $y) {}

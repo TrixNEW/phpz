@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: d547a5757a5eeb99ccec3747edb1545126fa457a */
+ * Stub hash: 36c687ef21040184c0c24fde4541777e2d1e7b30 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -146,6 +146,9 @@ ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_iterateArray, 0, 1, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, values, IS_ARRAY, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkTsrmCache, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_iterateWhileMutating, 0, 0, IS_ARRAY, 0)
@@ -303,8 +306,7 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_MyPHPExt_Test_allocatorBailout arginfo_MyPHPExt_Test_iterateWhileMutating
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_allocatorAlignment, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_MyPHPExt_Test_allocatorAlignment arginfo_MyPHPExt_Test_checkTsrmCache
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_guardResources, 0, 2, IS_VOID, 0)
 	ZEND_ARG_TYPE_INFO(0, label, IS_STRING, 0)
@@ -427,13 +429,13 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_class_MyPHPExt_Collection_rewind arginfo_hello
 
-#define arginfo_class_MyPHPExt_Collection_valid arginfo_MyPHPExt_Test_allocatorAlignment
+#define arginfo_class_MyPHPExt_Collection_valid arginfo_MyPHPExt_Test_checkTsrmCache
 
 #define arginfo_class_MyPHPExt_Config_greeting arginfo_class_MyPHPExt_Entity_label
 
 #define arginfo_class_MyPHPExt_Config_maxUsers arginfo_class_MyPHPExt_Identifiable_getId
 
-#define arginfo_class_MyPHPExt_Config_debugEnabled arginfo_MyPHPExt_Test_allocatorAlignment
+#define arginfo_class_MyPHPExt_Config_debugEnabled arginfo_MyPHPExt_Test_checkTsrmCache
 
 #define arginfo_class_MyPHPExt_Config_mode arginfo_class_MyPHPExt_Entity_label
 
@@ -512,6 +514,7 @@ ZEND_FUNCTION(MyPHPExt_Test_checkArrayHashTable);
 ZEND_FUNCTION(MyPHPExt_Test_isArrayList);
 ZEND_FUNCTION(MyPHPExt_Test_arrayToList);
 ZEND_FUNCTION(MyPHPExt_Test_iterateArray);
+ZEND_FUNCTION(MyPHPExt_Test_checkTsrmCache);
 ZEND_FUNCTION(MyPHPExt_Test_iterateWhileMutating);
 ZEND_FUNCTION(MyPHPExt_Test_buildList);
 ZEND_FUNCTION(MyPHPExt_Test_checkObjectPropertyHandlers);
@@ -767,6 +770,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "iterateArray"), zif_MyPHPExt_Test_iterateArray, arginfo_MyPHPExt_Test_iterateArray, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "iterateArray"), zif_MyPHPExt_Test_iterateArray, arginfo_MyPHPExt_Test_iterateArray, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkTsrmCache"), zif_MyPHPExt_Test_checkTsrmCache, arginfo_MyPHPExt_Test_checkTsrmCache, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkTsrmCache"), zif_MyPHPExt_Test_checkTsrmCache, arginfo_MyPHPExt_Test_checkTsrmCache, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "iterateWhileMutating"), zif_MyPHPExt_Test_iterateWhileMutating, arginfo_MyPHPExt_Test_iterateWhileMutating, 0, NULL, NULL)

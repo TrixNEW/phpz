@@ -7,6 +7,7 @@ const errors = @import("errors.zig");
 const Zval = @import("zval.zig").Zval;
 const zend = @import("zend.zig");
 const SapiGlobals = @import("sapi.zig").Globals;
+const tsrm = @import("tsrm.zig");
 
 pub const GlobalAccess = enum { ptr, value };
 
@@ -85,23 +86,34 @@ pub const class = struct {
     }
 };
 
+const zts = c.USING_ZTS != 0;
+
+inline fn fastGlobals(comptime T: type, comptime offset_name: []const u8) *T {
+    return tsrm.fastBulk(T, global(.value, usize, offset_name));
+}
+
 pub inline fn executor() *ExecutorGlobals {
+    if (comptime zts) return .from(fastGlobals(c.zend_executor_globals, "executor_globals_offset"));
     return .from(c.phpz_executor_globals());
 }
 
 pub inline fn compiler() *CompilerGlobals {
+    if (comptime zts) return .from(fastGlobals(c.zend_compiler_globals, "compiler_globals_offset"));
     return .from(c.phpz_compiler_globals());
 }
 
 pub inline fn php() *PhpGlobals {
+    if (comptime zts) return .from(fastGlobals(c.php_core_globals, "core_globals_offset"));
     return .from(c.phpz_core_globals());
 }
 
 pub inline fn sapi() *SapiGlobals {
+    if (comptime zts) return .from(fastGlobals(c.sapi_globals_struct, "sapi_globals_offset"));
     return .from(c.phpz_sapi_globals());
 }
 
 pub inline fn file() *FileGlobals {
+    if (comptime zts) return .from(tsrm.bulk(c.php_file_globals, global(.value, c_int, "file_globals_id")));
     return .from(c.phpz_file_globals());
 }
 

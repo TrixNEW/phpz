@@ -9,6 +9,10 @@ const guard = @import("guard.zig");
 const ini_helper = @import("ini.zig");
 const stub = @import("stub.zig");
 const observer = @import("observer.zig");
+const tsrm = @import("tsrm.zig");
+
+// Shared ZTS extensions keep a per-thread TSRM cache that RINIT must refresh.
+const refresh_tsrm_cache = c.USING_ZTS != 0 and phpz_options.shared;
 
 /// Configuration for creating a PHP extension module.
 ///
@@ -99,11 +103,23 @@ pub fn module(comptime cfg: Config) void {
     }
 }
 
-fn makePhpHookFn(comptime hook_fn: PhpHookFn) *const fn (c_int, c_int) callconv(.c) c.zend_result {
+fn makeRequestStartupFn(comptime hook_fn: ?PhpHookFn) ?*const fn (c_int, c_int) callconv(.c) c.zend_result {
+    if (comptime !refresh_tsrm_cache) return if (hook_fn) |f| makePhpHookFn(f, false) else null;
+    if (hook_fn) |f| return makePhpHookFn(f, true);
+    return struct {
+        fn handle(_: c_int, _: c_int) callconv(.c) c.zend_result {
+            _ = tsrm.refreshCache();
+            return c.SUCCESS;
+        }
+    }.handle;
+}
+
+fn makePhpHookFn(comptime hook_fn: PhpHookFn, comptime refresh: bool) *const fn (c_int, c_int) callconv(.c) c.zend_result {
     return struct {
         fn handle(module_type: c_int, module_number: c_int) callconv(.c) c.zend_result {
             _ = module_type;
             _ = module_number;
+            if (comptime refresh) _ = tsrm.refreshCache();
             hook_fn() catch |err| {
                 errors.warning("Module hook function failed: %s", .{@errorName(err).ptr});
                 return c.FAILURE;
@@ -125,6 +141,8 @@ fn makePhpModuleStartupFn(
     return struct {
         fn handle(module_type: c_int, module_number: c_int) callconv(.c) c.zend_result {
             _ = module_type;
+            tsrm.detectTcbOffset();
+            if (comptime refresh_tsrm_cache) _ = tsrm.refreshCache();
 
             guard.ScopeObject.register(module_number);
 
@@ -228,8 +246,8 @@ pub fn initModuleEntry(comptime cfg: Config) ModuleEntry {
     entry.functions = if (@hasDecl(c, "ext_functions")) &c.ext_functions else null;
     entry.module_startup_func = makePhpModuleStartupFn(cfg.name, cfg.module_startup_fn, registered_ini_defs, cfg.classes, cfg.observer);
     entry.module_shutdown_func = makePhpModuleShutdownFn(cfg.module_shutdown_fn, registered_ini_defs, cfg.observer);
-    entry.request_startup_func = if (cfg.request_startup_fn) |f| makePhpHookFn(f) else null;
-    entry.request_shutdown_func = if (cfg.request_shutdown_fn) |f| makePhpHookFn(f) else null;
+    entry.request_startup_func = makeRequestStartupFn(cfg.request_startup_fn);
+    entry.request_shutdown_func = if (cfg.request_shutdown_fn) |f| makePhpHookFn(f, false) else null;
     entry.info_func = if (cfg.info_fn) |f| makePhpInfoFn(f) else null;
     entry.version = cfg.version;
 
@@ -305,11 +323,12 @@ pub fn ModuleGlobals(comptime T: type) type {
             /// Returns the current thread's module globals.
             pub inline fn get() *T {
                 std.debug.assert(id != 0);
-                const ptr = c.phpz_tsrmg_bulk(id) orelse unreachable;
-                return @ptrCast(@alignCast(ptr));
+                return tsrm.bulk(T, id);
             }
 
             fn construct(raw: ?*anyopaque) callconv(.c) void {
+                // TSRM runs this on the thread whose storage is being created.
+                if (comptime phpz_options.shared) _ = tsrm.refreshCache();
                 const value: *T = @ptrCast(@alignCast(raw orelse unreachable));
                 value.* = .{};
                 if (comptime @hasDecl(T, "init")) value.init();

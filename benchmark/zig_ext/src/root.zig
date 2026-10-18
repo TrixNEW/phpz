@@ -24,6 +24,8 @@ comptime {
         .bench_zig_array_identity = arrayIdentity,
         .bench_zig_throw = throwException,
         .bench_zig_split = split,
+        .bench_zig_counter = counter,
+        .bench_zig_invoke = invoke,
     });
 
     const extension = @import("extension_info");
@@ -31,6 +33,8 @@ comptime {
         .name = extension.name,
         .version = extension.version,
         .classes = &.{PointClass},
+        .globals = Globals,
+        .request_startup_fn = resetCounter,
     });
 }
 
@@ -156,6 +160,22 @@ fn split(ctx: phpz.Ctx, s: []const u8, separator: []const u8) !void {
     const result = Zval.Array.empty(ctx.retval.ptr());
     var parts = std.mem.splitSequence(u8, s, separator);
     while (parts.next()) |part| try result.append(.string, part);
+}
+
+const Globals = phpz.ModuleGlobals(struct { counter: i64 = 0 });
+
+fn resetCounter() !void {
+    Globals.get().counter = 0;
+}
+
+fn counter() i64 {
+    const globals = Globals.get();
+    globals.counter += 1;
+    return globals.counter;
+}
+
+fn invoke(ctx: phpz.Ctx, callback: *zend.Callable, arg: *Zval) !void {
+    try callback.call(ctx.retval.ptr(), .{arg.ptr().*}, null);
 }
 
 const Point = struct {

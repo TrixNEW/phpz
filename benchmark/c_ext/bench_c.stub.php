@@ -37,6 +37,10 @@ function bench_c_throw(int $code): void {}
 
 function bench_c_split(string $s, string $separator): array {}
 
+function bench_c_counter(): int {}
+
+function bench_c_invoke(callable $callback, mixed $arg): mixed {}
+
 final class BenchCPoint
 {
     public function __construct(float $x, float $y) {}

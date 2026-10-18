@@ -225,6 +225,7 @@ namespace MyPHPExt\Test {
     function isArrayList(array $source): bool {}
     function arrayToList(array $source): array {}
     function iterateArray(array $values): array {}
+    function checkTsrmCache(): bool {}
     function iterateWhileMutating(): array {}
     function buildList(int $count, int $capacity, mixed $value): array {}
     function checkObjectPropertyHandlers(?object $lazy = null): void {}

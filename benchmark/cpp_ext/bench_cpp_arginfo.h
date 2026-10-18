@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: cfc0942d73dcb7a8bcf4d69b977d806c81c37016 */
+ * Stub hash: 6d9afb54a5aad924efc002b04119e6c48aed8adf */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_cpp_empty, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -70,6 +70,14 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_cpp_split, 0, 2, IS_ARRAY,
 	ZEND_ARG_TYPE_INFO(0, separator, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_cpp_counter, 0, 0, IS_LONG, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_bench_cpp_invoke, 0, 2, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, callback, IS_CALLABLE, 0)
+	ZEND_ARG_TYPE_INFO(0, arg, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_BenchCppPoint___construct, 0, 0, 2)
 	ZEND_ARG_TYPE_INFO(0, x, IS_DOUBLE, 0)
 	ZEND_ARG_TYPE_INFO(0, y, IS_DOUBLE, 0)
@@ -99,6 +107,8 @@ ZEND_FUNCTION(bench_cpp_hash_lookup);
 ZEND_FUNCTION(bench_cpp_array_identity);
 ZEND_FUNCTION(bench_cpp_throw);
 ZEND_FUNCTION(bench_cpp_split);
+ZEND_FUNCTION(bench_cpp_counter);
+ZEND_FUNCTION(bench_cpp_invoke);
 ZEND_METHOD(BenchCppPoint, __construct);
 ZEND_METHOD(BenchCppPoint, length);
 ZEND_METHOD(BenchCppPoint, translate);
@@ -120,6 +130,8 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_FE(bench_cpp_array_identity, arginfo_bench_cpp_array_identity)
 	ZEND_FE(bench_cpp_throw, arginfo_bench_cpp_throw)
 	ZEND_FE(bench_cpp_split, arginfo_bench_cpp_split)
+	ZEND_FE(bench_cpp_counter, arginfo_bench_cpp_counter)
+	ZEND_FE(bench_cpp_invoke, arginfo_bench_cpp_invoke)
 	ZEND_FE_END
 };
 
