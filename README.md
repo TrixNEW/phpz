@@ -119,13 +119,13 @@ Check out the [`examples/`](./examples/) directory for complete working examples
 2. **Compile-time** — `phpz.function()` and `phpz.functions()` export `zif_*` wrappers, `phpz.Class()` creates wrapper types, and `phpz.module()` exports `get_module()` for the dynamic loader.
 3. **Runtime** — PHP loads `.so` → `get_module()`:
 
-   | What      | Registered by             | When        | How                                               |
-   | --------- | ------------------------- | ----------- | ------------------------------------------------- |
-   | Functions | `ext_functions`           | Module init | Auto: set in module entry struct                  |
-   | Constants | `register_{name}_symbols` | MINIT       | Auto: called by `module_startup_func`             |
-   | Classes   | `register_class_*`        | MINIT       | Manual: `Class.register()` in `module_startup_fn` |
+   | What      | Registered by             | When        | How                                                   |
+   | --------- | ------------------------- | ----------- | ----------------------------------------------------- |
+   | Functions | `ext_functions`           | Module init | Auto: set in module entry struct                      |
+   | Constants | `register_{name}_symbols` | MINIT       | Auto: called by `module_startup_func`                 |
+   | Classes   | `register_class_*`        | MINIT       | Auto: `.classes` of `phpz.module`, in the given order |
 
-   > Functions are resolved from the module entry when the extension loads; constants are registered during MINIT via the auto-generated `register_{name}_symbols`. Classes require an explicit `Class.register()` call in `module_startup_fn` — this gives you control over registration order and the opportunity to configure `ObjectHandlers` or parent classes.
+   > Functions are resolved from the module entry when the extension loads; constants are registered during MINIT via the auto-generated `register_{name}_symbols`. Classes listed in `.classes` are registered in order before `module_startup_fn`, so list parents and interfaces first; use a class's `.register` option to supply them.
 
 ## Threads
 
