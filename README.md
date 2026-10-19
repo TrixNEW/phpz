@@ -21,6 +21,7 @@ A Zig framework for building PHP extensions with PHP C API bindings.
 - **INI, phpinfo, and errors** — typed INI values, phpinfo helpers, PHP errors, exceptions, and bailout-safe cleanup.
 - **Observers** — function-call, error, and exception hooks for profiling and monitoring.
 - **Memory** — PHP-backed Zig allocator with optional debug leak traces.
+- **Performance** — handlers and methods run within noise of equivalent C and C++ extensions on most workloads, and ahead on packed array iteration; see [`benchmark`](./benchmark/README.md).
 - **Build integration** — PHP C translation, extension linking, and platform-specific setup.
 - **PHP build system** — optional support for built-in and shared extensions. Pass `--with-php-build-system` to `phpz_skel.php`; see the [skeleton guide](./examples/skeleton/README.md#php-build-system).
 - **Cross-compilation** — build Windows x86_64 (MSVC) extensions from Linux; see [`scripts/build-windows.sh`](./scripts/build-windows.sh).
