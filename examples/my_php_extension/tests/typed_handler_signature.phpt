@@ -19,7 +19,8 @@ foreach ([256, -1] as $invalid) {
     try { $narrow($invalid); throw new Exception('range accepted'); }
     catch (ValueError $error) {}
 }
-try { $narrow('2'); throw new Exception('string accepted'); }
+checkTyped($narrow('2'), 2);
+try { $narrow('two'); throw new Exception('non-numeric string accepted'); }
 catch (TypeError $error) {}
 try { $narrow(1, 2); throw new Exception('extra argument accepted'); }
 catch (ArgumentCountError $error) {}
