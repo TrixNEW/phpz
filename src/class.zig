@@ -78,6 +78,8 @@ fn Resolved(comptime T: type) type {
         register: fn () anyerror!*zend.ClassEntry,
         /// Initializer for the Zig backing value.
         init: ?fn () anyerror!T,
+        /// Whether every object reachable by PHP code has an initialized backing.
+        backing_guaranteed: bool = false,
         /// Destructor for the Zig backing value.
         deinit: ?fn (*T) void,
         /// Cloner for the Zig backing value.
@@ -203,6 +205,7 @@ fn Resolved(comptime T: type) type {
             };
 
             var initializer: ?fn () anyerror!T = null;
+            var backing_guaranteed = false;
             var deinitializer: ?fn (*T) void = null;
             var cloner: ?fn (*const T) anyerror!T = null;
             var gc_callback: ?fn (*T, *GcBuffer) void = null;
@@ -220,13 +223,15 @@ fn Resolved(comptime T: type) type {
                     .enum_literal => if (init == .none)
                         null
                     else if (init == .default) blk: {
+                        backing_guaranteed = true;
                         break :blk struct {
                             fn call() anyerror!T {
                                 return .{};
                             }
                         }.call;
                     } else @compileError("Class " ++ class_name ++ " .init must be .none, .default, or a function"),
-                    .@"fn" => blk: {
+                    .@"fn" => |fn_info| blk: {
+                        backing_guaranteed = @typeInfo(fn_info.return_type.?) != .error_union;
                         break :blk struct {
                             fn call() anyerror!T {
                                 return @call(.auto, init, .{});
@@ -327,6 +332,7 @@ fn Resolved(comptime T: type) type {
                 .binding_strategy = binding_strategy,
                 .register = register,
                 .init = initializer,
+                .backing_guaranteed = backing_guaranteed,
                 .deinit = deinitializer,
                 .clone = cloner,
                 .gc = gc_callback,
@@ -704,13 +710,22 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
             }
         }
 
-        fn receiver(call: *CallFrame) ?*Self {
-            const obj = call.this() orelse {
-                errors.throwError(null, class_name ++ " must be called on an object", .{}) catch {};
+        /// Zend only dispatches instance methods with an object `$this`.
+        inline fn receiver(call: *CallFrame) ?*Self {
+            const this = &call.ptr().This;
+            std.debug.assert(Zval.raw.is(this, .object));
+            return fromObject(.from(this.value.obj)) catch {
+                @branchHint(.cold);
+                errors.throwError(null, "invalid object layout for " ++ class_name, .{}) catch {};
                 return null;
             };
-            return fromObject(obj) catch {
-                errors.throwError(null, "invalid object layout for " ++ class_name, .{}) catch {};
+        }
+
+        inline fn receiverBacking(self: *Self) ?*T {
+            if (comptime resolved.backing_guaranteed) return &self.backingStorage().*.?;
+            return self.backing() orelse {
+                @branchHint(.cold);
+                errors.throwError(null, class_name ++ " object is not initialized; call its constructor first", .{}) catch {};
                 return null;
             };
         }
@@ -742,14 +757,13 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
 
         pub const FromError = error{ NotObject, InvalidObjectLayout };
 
-        /// Borrow this class wrapper after checking its handlers and class.
+        /// Borrow this class wrapper after checking its handlers.
         /// Compatible subclasses are accepted; backing may still be null.
         /// Does not change reference counts or throw a PHP exception.
         /// `register()` must have succeeded before calling this function.
         pub fn fromObject(obj: *zend.Object) FromError!*Self {
-            if (obj.ptr().handlers != &handlers or !obj.instanceof(entry)) {
-                return error.InvalidObjectLayout;
-            }
+            // Only create_object and clone_obj of this class or its subclasses install these handlers.
+            if (obj.ptr().handlers != &handlers) return error.InvalidObjectLayout;
             return .fromStdUnchecked(obj.ptr());
         }
 
@@ -951,10 +965,7 @@ fn bindInstanceMethod(comptime class_name: [:0]const u8, comptime T: type, compt
     const handler = functions.createHandler(func_desc, struct {
         fn invoke(ctx: Context) anyerror!void {
             const self = ClassType.receiver(ctx.call) orelse return;
-            const backing = self.backing() orelse {
-                errors.throwError(null, class_name ++ " object is not initialized; call its constructor first", .{}) catch {};
-                return;
-            };
+            const backing = self.receiverBacking() orelse return;
             const value = try functions.invoke(func, ctx, backing);
             try functions.setReturnValue(ctx.retval, value);
         }
