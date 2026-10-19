@@ -299,8 +299,16 @@ pub const CallFrame = opaque {
 
     pub const ExpectArgError = errors.ArgumentTypeError || errors.ArgumentValueError;
 
-    /// Argument parsing type tags. This checks actual PHP types without ZPP's
-    /// weak scalar coercions. The table below compares type categories only.
+    /// Argument parsing type tags, matching ZPP semantics.
+    ///
+    /// `.int`, `.float`, `.string` and `.bool` accept their exact type on the fast
+    /// path and otherwise use Zend's own ZPP coercion: weak mode converts scalars
+    /// (and Stringable objects for strings) exactly like Z_PARAM_*, `strict_types`
+    /// rejects them, and int is always accepted for float. Null for a non-nullable
+    /// scalar follows the PHP version's deprecation rules. A coerced value
+    /// replaces the argument slot, as it does for PHP userland parameters.
+    /// Arrays, objects, resources, references and `.mixed` unions are never coerced.
+    /// Type errors use Zend's ZPP messages.
     ///
     /// Each member maps to a ZPP type spec and macro:
     ///
@@ -397,6 +405,20 @@ pub const CallFrame = opaque {
                 .reference, .mixed, .callable => unreachable,
                 inline else => |k| @field(Zval.Kind, @tagName(k)),
             };
+        }
+
+        fn expectedType(comptime self: ExpectArgKind, comptime nullable: bool) c.zend_expected_type {
+            const name = switch (self) {
+                .int => "LONG",
+                .float => "DOUBLE",
+                .string => "STRING",
+                .bool => "BOOL",
+                .array => "ARRAY",
+                .object => "OBJECT",
+                .resource => "RESOURCE",
+                else => unreachable,
+            };
+            return @intCast(@field(c, "Z_EXPECTED_" ++ name ++ if (nullable) "_OR_NULL" else ""));
         }
 
         inline fn InnerType(self: ExpectArgKind) type {
@@ -581,7 +603,7 @@ pub const CallFrame = opaque {
                             return @unionInit(Union, @tagName(kind), if (zk == .null) {} else Zval.raw.asUnchecked(zv, zk));
                         }
                     }
-                    return errors.argumentTypeError(arg_num, "must be of type " ++ php_union_type ++ ", %s given", .{Zval.raw.kind(zv).cstr()});
+                    return kindError(arg_num, php_union_type, zv);
                 } else {
                     return Zval.from(zv);
                 }
@@ -604,9 +626,7 @@ pub const CallFrame = opaque {
                 return if (comptime s.nullable) .{ .value = Zval.from(zv) } else Zval.from(zv);
             },
             .reference => |s| {
-                if (!Zval.raw.is(zv, .reference)) {
-                    return errors.argumentTypeError(arg_num, "must be of type reference, %s given", .{Zval.raw.kind(zv).cstr()});
-                }
+                if (!Zval.raw.is(zv, .reference)) return kindError(arg_num, "reference", zv);
                 const ref = Zval.raw.asUnchecked(zv, .reference);
                 if (comptime s.kind) |kind| {
                     const value = ref.val();
@@ -614,9 +634,7 @@ pub const CallFrame = opaque {
                         zend.Callable.isCallable(value)
                     else
                         Zval.raw.is(value, comptime kind.toZvalKind());
-                    if (!matches) {
-                        return errors.argumentTypeError(arg_num, "must be of type " ++ @tagName(kind) ++ ", %s given", .{Zval.raw.kind(value).cstr()});
-                    }
+                    if (!matches) return kindError(arg_num, @tagName(kind), value);
                 }
                 return switch (comptime s.as) {
                     .reference => ref,
@@ -625,28 +643,82 @@ pub const CallFrame = opaque {
                 };
             },
             .object => |s| {
-                const or_null = comptime if (s.nullable) " or null" else "";
                 if (comptime s.nullable) if (Zval.raw.is(zv, .null)) return if (comptime spec.isZval()) Zval.from(zv) else .null;
-                const obj = if (comptime s.instanceof) blk: {
-                    const expected_type = runtime.class;
-                    const value = Zval.raw.as(zv, .object) catch return errors.argumentTypeError(arg_num, "must be instance of %s" ++ or_null ++ ", %s given", .{ expected_type.name().ptr, Zval.raw.kind(zv).cstr() });
-                    if (!value.instanceof(expected_type)) return errors.argumentTypeError(arg_num, "must be instance of %s" ++ or_null ++ ", %s given", .{ expected_type.name().ptr, value.class().name().ptr });
-                    break :blk value;
-                } else Zval.raw.as(zv, .object) catch return errors.argumentTypeError(arg_num, "must be of type object" ++ or_null ++ ", %s given", .{Zval.raw.kind(zv).cstr()});
+                if (!Zval.raw.is(zv, .object)) {
+                    if (comptime s.instanceof) return classError(arg_num, runtime.class, s.nullable, zv);
+                    return typeError(arg_num, comptime ExpectArgKind.expectedType(.object, s.nullable), zv);
+                }
+                const obj = Zval.raw.asUnchecked(zv, .object);
+                if (comptime s.instanceof) {
+                    if (!obj.instanceof(runtime.class)) return classError(arg_num, runtime.class, s.nullable, zv);
+                }
                 if (comptime spec.isZval()) return Zval.from(zv);
                 return if (comptime s.nullable) .{ .value = obj } else obj;
             },
             inline else => |s| {
                 const tag: ExpectArgKind = spec;
-                const or_null = comptime if (s.nullable) " or null" else "";
                 if (comptime s.nullable) if (Zval.raw.is(zv, .null)) return if (comptime spec.isZval()) Zval.from(zv) else .null;
-                const zk = comptime tag.toZvalKind();
-                if (!Zval.raw.is(zv, zk))
-                    return errors.argumentTypeError(arg_num, "must be of type " ++ @tagName(tag) ++ or_null ++ ", %s given", .{Zval.raw.kind(zv).cstr()});
+                if (!Zval.raw.is(zv, comptime tag.toZvalKind())) {
+                    try coerce(tag, arg_num, zv, comptime ExpectArgKind.expectedType(tag, s.nullable));
+                }
                 if (comptime spec.isZval()) return Zval.from(zv);
                 const raw = try extractTypedValue(arg_num, zv, spec);
                 return if (comptime s.nullable) .{ .value = raw } else raw;
             },
+        }
+    }
+
+    // Error and coercion paths stay out of line so a handler's fast path is a
+    // single type compare per argument, as with Zend's Z_PARAM_* macros.
+
+    noinline fn typeError(arg_num: u32, expected: c.zend_expected_type, zv: *c.zval) errors.ArgumentTypeError {
+        @branchHint(.cold);
+        c.zend_wrong_parameter_type_error(arg_num, expected, zv);
+        return error.PhpArgumentTypeError;
+    }
+
+    noinline fn classError(arg_num: u32, class: *zend.ClassEntry, nullable: bool, zv: *c.zval) errors.ArgumentTypeError {
+        @branchHint(.cold);
+        if (nullable)
+            c.zend_wrong_parameter_class_or_null_error(arg_num, class.name().ptr, zv)
+        else
+            c.zend_wrong_parameter_class_error(arg_num, class.name().ptr, zv);
+        return error.PhpArgumentTypeError;
+    }
+
+    noinline fn kindError(arg_num: u32, comptime expected: []const u8, zv: *c.zval) errors.ArgumentTypeError {
+        @branchHint(.cold);
+        return errors.argumentTypeError(arg_num, "must be of type " ++ expected ++ ", %s given", .{Zval.raw.kind(zv).cstr()});
+    }
+
+    /// Apply ZPP's slow path to a by-value argument slot owned by the call frame.
+    noinline fn coerce(comptime kind: ExpectArgKind, arg_num: u32, zv: *c.zval, expected: c.zend_expected_type) errors.ArgumentTypeError!void {
+        @branchHint(.cold);
+        switch (kind) {
+            .int => {
+                var value: c.zend_long = undefined;
+                if (!c.zend_parse_arg_long_slow(zv, &value, arg_num)) return typeError(arg_num, expected, zv);
+                Zval.raw.release(zv);
+                Zval.raw.set(zv, .int, value);
+            },
+            .float => {
+                var value: f64 = undefined;
+                if (!c.zend_parse_arg_double_slow(zv, &value, arg_num)) return typeError(arg_num, expected, zv);
+                Zval.raw.release(zv);
+                Zval.raw.set(zv, .float, value);
+            },
+            .bool => {
+                var value: bool = undefined;
+                if (!c.zend_parse_arg_bool_slow(zv, &value, arg_num)) return typeError(arg_num, expected, zv);
+                Zval.raw.release(zv);
+                Zval.raw.set(zv, .bool, value);
+            },
+            // Converts the slot in place, like Z_PARAM_STR.
+            .string => {
+                var value: [*c]c.zend_string = null;
+                if (!c.zend_parse_arg_str_slow(zv, &value, arg_num)) return typeError(arg_num, expected, zv);
+            },
+            else => return typeError(arg_num, expected, zv),
         }
     }
 
