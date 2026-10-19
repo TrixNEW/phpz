@@ -129,3 +129,19 @@ pub fn buildList(count: u32, capacity: u32, value: *Zval) *Array {
     }
     return builder.finish();
 }
+
+/// PHP: MyPHPExt\Test\lookupKey(array $values, string $key, bool $symtable): mixed
+pub fn lookupKey(values: *Array, key: []const u8, symtable: bool) ?*Zval {
+    const found = if (symtable) values.symtableFind(key) else values.find(key);
+    return Zval.from(found orelse return null);
+}
+
+/// PHP: MyPHPExt\Test\storeKey(array $values, string $key, mixed $value): array
+pub fn storeKey(ctx: phpz.Ctx, values: *Array, key: []const u8, value: *Zval) !void {
+    const result = values.dupe();
+    var copy: c.zval = undefined;
+    Zval.raw.copy(&copy, value.ptr());
+    _ = result.symtableUpdate(key, &copy);
+    result.symtableDelete("drop") catch {};
+    ctx.retval.set(.array, result);
+}
