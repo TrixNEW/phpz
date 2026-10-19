@@ -507,6 +507,13 @@ pub const Array = opaque {
             self.cursor += 1;
         }
 
+        /// Like append(), for builders created with enough capacity for every element.
+        pub inline fn appendAssumeCapacity(self: *ListBuilder, comptime zk: Zval.Kind, value: Zval.Type(zk)) void {
+            std.debug.assert(self.cursor != self.end);
+            Zval.raw.set(&self.cursor[0], zk, value);
+            self.cursor += 1;
+        }
+
         /// Append an initialized zval, transferring its contents without addref.
         pub inline fn appendValue(self: *ListBuilder, value: *const c.zval) void {
             if (self.cursor == self.end) self.* = grow(self.*);
