@@ -302,6 +302,8 @@ namespace MyPHPExt\Test {
 
     function allocatorAlignment(): bool {}
 
+    function nativeOutOfMemory(): void {}
+
     function guardResources(string $label, callable $callback, bool $fail = false): void {}
 
     function superglobalsSnapshot(): array {}

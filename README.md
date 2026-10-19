@@ -137,6 +137,18 @@ Native worker threads must not touch them, under NTS or ZTS.
 - Wake the PHP side through your own primitive (a pipe, eventfd or polled queue) and drain it from a PHP call.
 - Objects and module globals are per request thread under ZTS; do not share them across threads.
 
+## Bailouts
+
+A Zend bailout (a fatal error, including the memory limit) is a `longjmp`: Zig `defer` and `errdefer`
+between the bailout and the boundary that catches it do not run.
+
+- `php_allocator` and the `try*` APIs (`tryCall`, `tryNew`, `tryEval`, ...) catch the bailout and return
+  `error.ZendBailout` or `error.OutOfMemory`, so your `errdefer` runs. Propagate those errors; phpz resumes the
+  bailout when the handler returns. PHP has already reported the fatal error and the request will end.
+- Other Zend calls can bail out directly. Keep native resources that must be released on bailout in a
+  `GuardCtx` scope, or in objects PHP destroys at request shutdown.
+- An `error.OutOfMemory` from a non-PHP allocator becomes a PHP fatal "Out of memory" error.
+
 ## Acknowledgements
 
 phpz was inspired by [ext-php-rs](https://github.com/extphprs/ext-php-rs).

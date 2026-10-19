@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: d5c3ad0cc14106d4100835b09e2ccf24f3bc42e7 */
+ * Stub hash: ccf76f051e2221354091a320f9bdaeaa00b2f373 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -296,6 +296,8 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_allocatorAlignment, 0, 0, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
+#define arginfo_MyPHPExt_Test_nativeOutOfMemory arginfo_hello
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_guardResources, 0, 2, IS_VOID, 0)
 	ZEND_ARG_TYPE_INFO(0, label, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, callback, IS_CALLABLE, 0)
@@ -532,6 +534,7 @@ ZEND_FUNCTION(MyPHPExt_Test_makeFnClosure);
 ZEND_FUNCTION(MyPHPExt_Test_wrapClosure);
 ZEND_FUNCTION(MyPHPExt_Test_allocatorBailout);
 ZEND_FUNCTION(MyPHPExt_Test_allocatorAlignment);
+ZEND_FUNCTION(MyPHPExt_Test_nativeOutOfMemory);
 ZEND_FUNCTION(MyPHPExt_Test_guardResources);
 ZEND_FUNCTION(MyPHPExt_Test_superglobalsSnapshot);
 ZEND_FUNCTION(MyPHPExt_Test_mutateSuperglobals);
@@ -904,6 +907,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "allocatorAlignment"), zif_MyPHPExt_Test_allocatorAlignment, arginfo_MyPHPExt_Test_allocatorAlignment, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "allocatorAlignment"), zif_MyPHPExt_Test_allocatorAlignment, arginfo_MyPHPExt_Test_allocatorAlignment, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "nativeOutOfMemory"), zif_MyPHPExt_Test_nativeOutOfMemory, arginfo_MyPHPExt_Test_nativeOutOfMemory, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "nativeOutOfMemory"), zif_MyPHPExt_Test_nativeOutOfMemory, arginfo_MyPHPExt_Test_nativeOutOfMemory, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "guardResources"), zif_MyPHPExt_Test_guardResources, arginfo_MyPHPExt_Test_guardResources, 0, NULL, NULL)

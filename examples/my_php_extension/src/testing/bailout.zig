@@ -64,3 +64,9 @@ pub fn allocatorBailout(ctx: phpz.Ctx) !void {
     result.set(.bool, "cleanup_defer", cleanup_defer);
     result.set(.bool, "freed_blocks", freed_blocks > 0);
 }
+
+/// PHP: MyPHPExt\Test\nativeOutOfMemory(): void
+/// An allocation failure outside PHP's allocator, which PHP has not reported.
+pub fn nativeOutOfMemory() !void {
+    return error.OutOfMemory;
+}
