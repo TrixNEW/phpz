@@ -61,7 +61,7 @@ pub const Comparison = enum(i32) { less = -1, equal = 0, greater = 1 };
 
 const Layout = enum { std, backed };
 const MethodKind = enum { instance, static };
-const Method = struct { name: [:0]const u8, kind: MethodKind };
+const Method = struct { name: [:0]const u8, kind: MethodKind, variadic: bool };
 const MethodTable = stub.DeclarationTable(Method);
 const BindingStrategy = enum { automatic, explicit };
 fn Resolved(comptime T: type) type {
@@ -141,7 +141,7 @@ fn Resolved(comptime T: type) type {
 
                     pairs[len] = .{
                         name,
-                        .{ .name = name, .kind = if (method.isStatic()) .static else .instance },
+                        .{ .name = name, .kind = if (method.isStatic()) .static else .instance, .variadic = method.isVariadic() },
                     };
                     len += 1;
                 }
@@ -930,46 +930,46 @@ fn bind(
     comptime func: anytype,
 ) void {
     if (class_layout == .std) {
-        functions.method(class_name, method.name, func);
+        functions.methodFor(class_name, method.name, func, method.variadic);
         return;
     }
     if (std.mem.eql(u8, method.name, "__construct")) {
-        bindConstructor(class_name, T, ClassType, func);
+        bindConstructor(class_name, T, ClassType, func, method.variadic);
         return;
     }
     switch (method.kind) {
-        .static => functions.method(class_name, method.name, func),
-        .instance => bindInstanceMethod(class_name, T, ClassType, method.name, func),
+        .static => functions.methodFor(class_name, method.name, func, method.variadic),
+        .instance => bindInstanceMethod(class_name, T, ClassType, method.name, func, method.variadic),
     }
 }
 
-fn bindConstructor(comptime class_name: [:0]const u8, comptime T: type, comptime ClassType: type, comptime func: anytype) void {
+fn bindConstructor(comptime class_name: [:0]const u8, comptime T: type, comptime ClassType: type, comptime func: anytype, comptime variadic: bool) void {
     const Context = functions.ContextType(func, false);
-    const handler = functions.createHandler(class_name ++ "::__construct()", struct {
+    const handler = functions.createHandlerFor(class_name ++ "::__construct()", struct {
         fn invoke(ctx: Context) anyerror!void {
             const self = ClassType.receiver(ctx.call) orelse return;
-            const value: T = try functions.invoke(func, ctx, {});
+            const value: T = try functions.invoke(func, ctx, {}, variadic);
             self.commitBacking(value);
         }
-    }.invoke);
+    }.invoke, variadic);
     @export(&handler, .{ .name = stub.methodSymbolName(class_name, "__construct") });
 }
 
-fn bindInstanceMethod(comptime class_name: [:0]const u8, comptime T: type, comptime ClassType: type, comptime method_name: [:0]const u8, comptime func: anytype) void {
+fn bindInstanceMethod(comptime class_name: [:0]const u8, comptime T: type, comptime ClassType: type, comptime method_name: [:0]const u8, comptime func: anytype, comptime variadic: bool) void {
     const func_desc = class_name ++ "::" ++ method_name ++ "()";
     const params = @typeInfo(@TypeOf(func)).@"fn".param_types;
     if (params.len == 0 or (params[0] != *T and params[0] != *const T)) {
         @compileError("instance method " ++ func_desc ++ " must take *" ++ @typeName(T) ++ " or *const " ++ @typeName(T) ++ " as its first parameter");
     }
     const Context = functions.ContextType(func, true);
-    const handler = functions.createHandler(func_desc, struct {
+    const handler = functions.createHandlerFor(func_desc, struct {
         fn invoke(ctx: Context) anyerror!void {
             const self = ClassType.receiver(ctx.call) orelse return;
             const backing = self.receiverBacking() orelse return;
-            const value = try functions.invoke(func, ctx, backing);
+            const value = try functions.invoke(func, ctx, backing, variadic);
             try functions.setReturnValue(ctx.retval, value);
         }
-    }.invoke);
+    }.invoke, variadic);
     @export(&handler, .{ .name = stub.methodSymbolName(class_name, method_name) });
 }
 
