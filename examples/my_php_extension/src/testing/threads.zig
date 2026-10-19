@@ -45,10 +45,10 @@ fn cacheMatches() bool {
         if (c.phpz_static_tsrmls_cache_get() != storage) return false;
     }
     const base = @intFromPtr(storage);
-    return @intFromPtr(c.phpz_executor_globals()) == base + c.executor_globals_offset and
-        @intFromPtr(c.phpz_compiler_globals()) == base + c.compiler_globals_offset and
-        @intFromPtr(c.phpz_core_globals()) == base + c.core_globals_offset and
-        @intFromPtr(c.phpz_sapi_globals()) == base + c.sapi_globals_offset;
+    return @intFromPtr(phpz.globals.executor()) == base + c.executor_globals_offset and
+        @intFromPtr(phpz.globals.compiler()) == base + c.compiler_globals_offset and
+        @intFromPtr(phpz.globals.php()) == base + c.core_globals_offset and
+        @intFromPtr(phpz.globals.sapi()) == base + c.sapi_globals_offset;
 }
 
 fn worker(shared: *Shared, index: usize) void {
@@ -136,4 +136,10 @@ pub fn checkNativeTsrmThreads() !bool {
     }
     if (failed) return error.TsrmThreadIsolationFailed;
     return true;
+}
+
+/// PHP: MyPHPExt\Test\checkTsrmCache(): bool
+/// phpz's TSRM fast path must agree with PHP's own lookup on every thread.
+pub fn checkTsrmCache() bool {
+    if (comptime !phpz.zts) return true else return phpz.tsrm.localStorage() == phpz.c.tsrm_get_ls_cache();
 }

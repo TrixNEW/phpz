@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: b932b7e30cea25ab76af8d62505fdef7e58f211e */
+ * Stub hash: 72d08e0547b4820120745acae61bd477ddc10c6e */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -155,6 +155,8 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_arrayToList, 0, 1, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, source, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
+
+#define arginfo_MyPHPExt_Test_checkTsrmCache arginfo_MyPHPExt_Test_checkNativeTsrmThreads
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_iterateArray, 0, 1, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, values, IS_ARRAY, 0)
@@ -544,6 +546,7 @@ ZEND_FUNCTION(MyPHPExt_Test_checkExceptionBoundary);
 ZEND_FUNCTION(MyPHPExt_Test_checkArrayHashTable);
 ZEND_FUNCTION(MyPHPExt_Test_isArrayList);
 ZEND_FUNCTION(MyPHPExt_Test_arrayToList);
+ZEND_FUNCTION(MyPHPExt_Test_checkTsrmCache);
 ZEND_FUNCTION(MyPHPExt_Test_iterateArray);
 ZEND_FUNCTION(MyPHPExt_Test_lookupKey);
 ZEND_FUNCTION(MyPHPExt_Test_storeKey);
@@ -814,6 +817,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "arrayToList"), zif_MyPHPExt_Test_arrayToList, arginfo_MyPHPExt_Test_arrayToList, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "arrayToList"), zif_MyPHPExt_Test_arrayToList, arginfo_MyPHPExt_Test_arrayToList, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkTsrmCache"), zif_MyPHPExt_Test_checkTsrmCache, arginfo_MyPHPExt_Test_checkTsrmCache, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkTsrmCache"), zif_MyPHPExt_Test_checkTsrmCache, arginfo_MyPHPExt_Test_checkTsrmCache, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "iterateArray"), zif_MyPHPExt_Test_iterateArray, arginfo_MyPHPExt_Test_iterateArray, 0, NULL, NULL)
