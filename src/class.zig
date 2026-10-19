@@ -645,6 +645,8 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
                         if (!errors.hasException()) {
                             errors.throwError(null, "%s while initializing " ++ class_name, .{@errorName(err).ptr}) catch {};
                         }
+                        // Keep __destruct off the half-built object, as Zend does for failed constructors.
+                        c.zend_object_store_ctor_failed(&intern.std);
                         return &intern.std;
                     };
                 }
@@ -662,6 +664,7 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
                 const target = alloc(obj.?.ce.?);
                 const source_backing: *const T = source.backing() orelse {
                     errors.throwError(null, "Cannot clone uninitialized " ++ class_name, .{}) catch {};
+                    c.zend_object_store_ctor_failed(&target.std);
                     return &target.std;
                 };
                 const cloner = resolved.clone orelse unreachable;
@@ -670,6 +673,7 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
                     if (!errors.hasException()) {
                         errors.throwError(null, "%s while cloning " ++ class_name, .{@errorName(err).ptr}) catch {};
                     }
+                    c.zend_object_store_ctor_failed(&target.std);
                     return &target.std;
                 };
                 target.backingStorage().* = cloned;

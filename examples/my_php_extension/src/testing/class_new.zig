@@ -34,7 +34,37 @@ const Value = struct {
 
 const ValueClass = phpz.Class("MyPHPExt\\Test\\NewValue", Value, .{ .deinit = Value.deinit });
 const BareClass = phpz.Class("MyPHPExt\\Test\\NewBare", struct { value: i64 = 0 }, .{});
-pub const classes = .{ ValueClass, BareClass };
+
+const FallibleStage = enum { none, init, clone };
+threadlocal var fail_stage: FallibleStage = .none;
+
+const Fallible = struct {
+    amount: i64,
+
+    fn init() !Fallible {
+        defer fail_stage = .none;
+        if (fail_stage == .init) return error.InitRefused;
+        return .{ .amount = 7 };
+    }
+
+    fn clone(self: *const Fallible) !Fallible {
+        defer fail_stage = .none;
+        if (fail_stage == .clone) return error.CloneRefused;
+        return self.*;
+    }
+
+    pub fn value(self: *const Fallible) i64 {
+        return self.amount;
+    }
+};
+
+const FallibleClass = phpz.Class("MyPHPExt\\Test\\FallibleValue", Fallible, .{ .init = Fallible.init, .clone = Fallible.clone });
+pub const classes = .{ ValueClass, BareClass, FallibleClass };
+
+/// Make the next FallibleValue initialization or clone fail.
+pub fn failNextFallible(stage: []const u8) !void {
+    fail_stage = std.meta.stringToEnum(FallibleStage, stage) orelse return phpz.errors.argumentValueError(1, "must be none, init or clone", .{});
+}
 
 /// Exercise Class.new()/tryNew() with borrowed positional and named arguments.
 pub fn newObject(ctx: phpz.Ctx, bare: bool, positional: *phpz.zend.Array, named: phpz.Nullable(*phpz.zend.Array), guarded: bool) !void {
