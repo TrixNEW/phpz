@@ -139,6 +139,7 @@ fn makePhpModuleStartupFn(
             _ = module_type;
 
             tsrm.updateCache();
+            tsrm.detectTcbOffset();
             guard.ScopeObject.register(module_number);
 
             if (comptime has_symbols) {
@@ -318,8 +319,7 @@ pub fn ModuleGlobals(comptime T: type) type {
             /// Returns the current thread's module globals.
             pub inline fn get() *T {
                 std.debug.assert(id != 0);
-                const ptr = c.phpz_tsrmg_bulk(id) orelse unreachable;
-                return @ptrCast(@alignCast(ptr));
+                return tsrm.bulk(T, id);
             }
 
             fn construct(raw: ?*anyopaque) callconv(.c) void {
