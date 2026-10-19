@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 9ceb89c758677ff23745e16a5476e75ab337723f */
+ * Stub hash: d5c3ad0cc14106d4100835b09e2ccf24f3bc42e7 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -240,6 +240,8 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_newObject, 0, 4, I
 	ZEND_ARG_TYPE_INFO(0, guarded, _IS_BOOL, 0)
 ZEND_END_ARG_INFO()
 
+#define arginfo_MyPHPExt_Test_failNextFallible arginfo_MyPHPExt_Test_checkObjectCreation
+
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_castValue, 0, 3, IS_MIXED, 0)
 	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
 	ZEND_ARG_TYPE_INFO(0, type, IS_STRING, 0)
@@ -439,6 +441,8 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_class_MyPHPExt_Test_NewValue___destruct arginfo_class_MyPHPExt_ClosureCounter___construct
 
+#define arginfo_class_MyPHPExt_Test_FallibleValue_value arginfo_class_MyPHPExt_Identifiable_getId
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_class_MyPHPExt_Test_SerializableValue___construct, 0, 0, 1)
 	ZEND_ARG_TYPE_INFO(0, value, IS_LONG, 0)
 ZEND_END_ARG_INFO()
@@ -516,6 +520,7 @@ ZEND_FUNCTION(MyPHPExt_Test_readClassConstant);
 ZEND_FUNCTION(MyPHPExt_Test_setMixedProperty);
 ZEND_FUNCTION(MyPHPExt_Test_setMixedReferenceProperty);
 ZEND_FUNCTION(MyPHPExt_Test_newObject);
+ZEND_FUNCTION(MyPHPExt_Test_failNextFallible);
 ZEND_FUNCTION(MyPHPExt_Test_castValue);
 ZEND_FUNCTION(MyPHPExt_Test_castReferenceValue);
 ZEND_FUNCTION(MyPHPExt_Test_checkedNamedArguments);
@@ -569,6 +574,7 @@ ZEND_METHOD(MyPHPExt_Metrics, reset);
 ZEND_METHOD(MyPHPExt_Test_NewValue, __construct);
 ZEND_METHOD(MyPHPExt_Test_NewValue, values);
 ZEND_METHOD(MyPHPExt_Test_NewValue, __destruct);
+ZEND_METHOD(MyPHPExt_Test_FallibleValue, value);
 ZEND_METHOD(MyPHPExt_Test_SerializableValue, __construct);
 ZEND_METHOD(MyPHPExt_Test_SerializableValue, value);
 ZEND_METHOD(MyPHPExt_Test_SerializableValue, __serialize);
@@ -840,6 +846,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "newObject"), zif_MyPHPExt_Test_newObject, arginfo_MyPHPExt_Test_newObject, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "failNextFallible"), zif_MyPHPExt_Test_failNextFallible, arginfo_MyPHPExt_Test_failNextFallible, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "failNextFallible"), zif_MyPHPExt_Test_failNextFallible, arginfo_MyPHPExt_Test_failNextFallible, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "castValue"), zif_MyPHPExt_Test_castValue, arginfo_MyPHPExt_Test_castValue, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "castValue"), zif_MyPHPExt_Test_castValue, arginfo_MyPHPExt_Test_castValue, 0)
@@ -1024,6 +1035,11 @@ static const zend_function_entry class_MyPHPExt_Test_NewValue_methods[] = {
 	ZEND_ME(MyPHPExt_Test_NewValue, __construct, arginfo_class_MyPHPExt_Test_NewValue___construct, ZEND_ACC_PUBLIC)
 	ZEND_ME(MyPHPExt_Test_NewValue, values, arginfo_class_MyPHPExt_Test_NewValue_values, ZEND_ACC_PUBLIC)
 	ZEND_ME(MyPHPExt_Test_NewValue, __destruct, arginfo_class_MyPHPExt_Test_NewValue___destruct, ZEND_ACC_PUBLIC)
+	ZEND_FE_END
+};
+
+static const zend_function_entry class_MyPHPExt_Test_FallibleValue_methods[] = {
+	ZEND_ME(MyPHPExt_Test_FallibleValue, value, arginfo_class_MyPHPExt_Test_FallibleValue_value, ZEND_ACC_PUBLIC)
 	ZEND_FE_END
 };
 
@@ -1342,6 +1358,20 @@ static zend_class_entry *register_class_MyPHPExt_Test_NewBare(void)
 	zend_class_entry ce, *class_entry;
 
 	INIT_NS_CLASS_ENTRY(ce, "MyPHPExt\\Test", "NewBare", NULL);
+#if (PHP_VERSION_ID >= 80400)
+	class_entry = zend_register_internal_class_with_flags(&ce, NULL, 0);
+#else
+	class_entry = zend_register_internal_class_ex(&ce, NULL);
+#endif
+
+	return class_entry;
+}
+
+static zend_class_entry *register_class_MyPHPExt_Test_FallibleValue(void)
+{
+	zend_class_entry ce, *class_entry;
+
+	INIT_NS_CLASS_ENTRY(ce, "MyPHPExt\\Test", "FallibleValue", class_MyPHPExt_Test_FallibleValue_methods);
 #if (PHP_VERSION_ID >= 80400)
 	class_entry = zend_register_internal_class_with_flags(&ce, NULL, 0);
 #else

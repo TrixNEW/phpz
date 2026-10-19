@@ -255,6 +255,13 @@ namespace MyPHPExt\Test {
 
     class NewBare {}
 
+    class FallibleValue
+    {
+        public function value(): int {}
+    }
+
+    function failNextFallible(string $stage): void {}
+
     function castValue(mixed $value, string $type, bool $convert): mixed {}
 
     function castReferenceValue(mixed &$value, string $type, bool $convert): mixed {}
