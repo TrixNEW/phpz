@@ -227,6 +227,7 @@ namespace MyPHPExt\Test {
     function iterateArray(array $values): array {}
     function lookupKey(array $values, string $key, bool $symtable): mixed {}
     function storeKey(array $values, string $key, mixed $value): array {}
+    function deleteKey(array $values, string $key): array {}
     function iterateWhileMutating(): array {}
     function buildList(int $count, int $capacity, mixed $value): array {}
     function checkObjectPropertyHandlers(?object $lazy = null): void {}

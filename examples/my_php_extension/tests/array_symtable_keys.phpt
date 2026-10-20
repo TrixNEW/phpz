@@ -6,6 +6,7 @@ my_php_extension
 <?php
 use function MyPHPExt\Test\lookupKey;
 use function MyPHPExt\Test\storeKey;
+use function MyPHPExt\Test\deleteKey;
 
 $values = [1 => 'one', -5 => 'minus five', 'x' => 'ex', '01' => 'zero one', 'drop' => true];
 foreach (['1', '-5', 'x', '01', '1.0', ' 1'] as $key) {
@@ -16,6 +17,18 @@ foreach (['1', '-5', 'x', '01', '1.0', ' 1'] as $key) {
 }
 $stored = storeKey($values, '7', 'seven');
 var_dump(array_key_exists(7, $stored), isset($stored['7']), array_key_exists('drop', $stored), count($values));
+
+foreach (['', '-', '0', '-1', '01'] as $key) {
+    $stored = storeKey([], $key, 10);
+    $stored = storeKey($stored, $key, 20);
+    if ($stored !== [$key => 20] || lookupKey($stored, $key, true) !== 20) {
+        throw new RuntimeException('symtable update/find mismatch');
+    }
+    if (deleteKey($stored, $key) !== [] || lookupKey([], $key, true) !== null) {
+        throw new RuntimeException('symtable delete/missing lookup mismatch');
+    }
+}
+echo "edge keys passed\n";
 ?>
 --EXPECT--
 '1'  symtable='one' raw=NULL php='one'
@@ -28,3 +41,4 @@ bool(true)
 bool(true)
 bool(false)
 int(5)
+edge keys passed

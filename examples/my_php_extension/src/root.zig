@@ -89,6 +89,7 @@ comptime {
         .@"MyPHPExt\\Test\\iterateArray" = @import("testing/iteration.zig").iterateArray,
         .@"MyPHPExt\\Test\\lookupKey" = @import("testing/iteration.zig").lookupKey,
         .@"MyPHPExt\\Test\\storeKey" = @import("testing/iteration.zig").storeKey,
+        .@"MyPHPExt\\Test\\deleteKey" = @import("testing/iteration.zig").deleteKey,
         .@"MyPHPExt\\Test\\iterateWhileMutating" = @import("testing/iteration.zig").iterateWhileMutating,
         .@"MyPHPExt\\Test\\buildList" = @import("testing/iteration.zig").buildList,
         .@"MyPHPExt\\Test\\checkArrayCallbacks" = @import("testing/boundaries.zig").checkArrayCallbacks,

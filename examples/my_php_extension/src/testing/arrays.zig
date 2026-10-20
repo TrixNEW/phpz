@@ -84,7 +84,9 @@ fn checkStringKeys() !void {
     try expect(payload.refcount() == 3); // Failed insertion retains caller ownership.
     raw.release(&rejected);
     value = raw.init(.int, 42);
-    try expect(table.updateStr(same_key, &value) != null);
+    const updated = table.updateStr(same_key, &value);
+    try expect(updated == table.findStr(same_key).?);
+    try expect(raw.asUnchecked(updated, .int) == 42);
     try expect(payload.refcount() == 1); // Replacement released the old value.
     try expect(table.len() == 1 and table.hasStr(key));
     try table.deleteStr(same_key);
