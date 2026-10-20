@@ -215,6 +215,7 @@ namespace MyPHPExt\Test {
     function checkZvalStrings(string $value, object $fixture): string {}
     function checkStringWriteFailure(object $fixture, string $api, string $exception): void {}
     function checkZendStrings(): void {}
+    function checkNativeTsrmThreads(): bool {}
     function objectView(object $object, string $purpose): ?array {}
     function readObjectNative(object $object, string $name, string $api): mixed {}
     function writeObjectNative(object $object, string $name, mixed $input, string $api): void {}

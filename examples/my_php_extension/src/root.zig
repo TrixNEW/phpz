@@ -1,4 +1,5 @@
 const phpz = @import("phpz");
+const extension = @import("extension_info");
 
 const api = @import("api.zig");
 const functions = @import("functions.zig");
@@ -16,6 +17,18 @@ const class_new = @import("testing/class_new.zig");
 const stream_tests = @import("testing/streams.zig");
 const closures = @import("closures.zig");
 
+const thread_tests = @import("testing/threads.zig");
+const typed_arguments = @import("testing/typed_arguments.zig");
+const object_tests = @import("testing/objects.zig");
+const object_access = @import("testing/object_access.zig");
+const string_tests = @import("testing/strings.zig");
+const array_tests = @import("testing/arrays.zig");
+const iteration = @import("testing/iteration.zig");
+const boundaries = @import("testing/boundaries.zig");
+const class_entry = @import("testing/class_entry.zig");
+const property_tests = @import("testing/properties.zig");
+const zval_tests = @import("testing/zval.zig");
+
 fn info(m: *phpz.ModuleEntry) void {
     phpz.info.table.start();
     phpz.info.table.header(.{ "my_php_extension support", "enabled" });
@@ -24,9 +37,8 @@ fn info(m: *phpz.ModuleEntry) void {
 }
 
 comptime {
-    const extension = @import("extension_info");
-
     phpz.namedFunctions(.{
+        .@"MyPHPExt\\Test\\checkNativeTsrmThreads" = thread_tests.checkNativeTsrmThreads,
         .@"MyPHPExt\\Test\\checkStreams" = stream_tests.checkStreams,
         .@"MyPHPExt\\Test\\openStream" = stream_tests.openStream,
         .@"MyPHPExt\\Test\\openPersistentStream" = stream_tests.openPersistentStream,
@@ -41,10 +53,10 @@ comptime {
         .@"MyPHPExt\\Test\\closeStream" = stream_tests.closeStream,
         .@"MyPHPExt\\Test\\syncStream" = stream_tests.syncStream,
         .@"MyPHPExt\\Test\\checkStreamFailures" = stream_tests.checkStreamFailures,
-        .@"MyPHPExt\\Test\\typedArgument" = @import("testing/typed_arguments.zig").typedArgument,
-        .@"MyPHPExt\\Test\\checkStringArguments" = @import("testing/typed_arguments.zig").checkStringArguments,
-        .@"MyPHPExt\\Test\\checkZvalStrings" = @import("testing/typed_arguments.zig").checkZvalStrings,
-        .@"MyPHPExt\\Test\\checkStringWriteFailure" = @import("testing/typed_arguments.zig").checkStringWriteFailure,
+        .@"MyPHPExt\\Test\\typedArgument" = typed_arguments.typedArgument,
+        .@"MyPHPExt\\Test\\checkStringArguments" = typed_arguments.checkStringArguments,
+        .@"MyPHPExt\\Test\\checkZvalStrings" = typed_arguments.checkZvalStrings,
+        .@"MyPHPExt\\Test\\checkStringWriteFailure" = typed_arguments.checkStringWriteFailure,
         .hello = functions.hello,
         .greet = functions.greet,
         .@"MyPHPExt\\increment" = functions.increment,
@@ -68,42 +80,42 @@ comptime {
         .@"MyPHPExt\\Test\\invokeArguments" = named_arguments.invokeArguments,
         .@"MyPHPExt\\Test\\newObject" = class_new.newObject,
         .@"MyPHPExt\\Test\\failNextFallible" = class_new.failNextFallible,
-        .@"MyPHPExt\\Test\\cloneObject" = @import("testing/objects.zig").cloneObject,
-        .@"MyPHPExt\\Test\\objectProperties" = @import("testing/objects.zig").objectProperties,
-        .@"MyPHPExt\\Test\\hasObjectProperty" = @import("testing/objects.zig").hasObjectProperty,
-        .@"MyPHPExt\\Test\\initObject" = @import("testing/objects.zig").initObject,
-        .@"MyPHPExt\\Test\\constructObject" = @import("testing/objects.zig").constructObject,
-        .@"MyPHPExt\\Test\\objectView" = @import("testing/object_access.zig").objectView,
-        .@"MyPHPExt\\Test\\readObjectNative" = @import("testing/object_access.zig").readObjectNative,
-        .@"MyPHPExt\\Test\\writeObjectNative" = @import("testing/object_access.zig").writeObjectNative,
-        .@"MyPHPExt\\Test\\objectDimension" = @import("testing/object_access.zig").objectDimension,
-        .@"MyPHPExt\\Test\\checkObjectViews" = @import("testing/object_access.zig").checkObjectViews,
-        .@"MyPHPExt\\Test\\checkZendStrings" = @import("testing/strings.zig").checkZendStrings,
-        .@"MyPHPExt\\Test\\copyArray" = @import("testing/arrays.zig").copyArray,
-        .@"MyPHPExt\\Test\\separateArray" = @import("testing/arrays.zig").separateArray,
-        .@"MyPHPExt\\Test\\mergeArray" = @import("testing/arrays.zig").mergeArray,
-        .@"MyPHPExt\\Test\\compareArrays" = @import("testing/arrays.zig").compareArrays,
-        .@"MyPHPExt\\Test\\checkArrayHashTable" = @import("testing/arrays.zig").checkArrayHashTable,
-        .@"MyPHPExt\\Test\\isArrayList" = @import("testing/arrays.zig").isArrayList,
-        .@"MyPHPExt\\Test\\arrayToList" = @import("testing/arrays.zig").arrayToList,
-        .@"MyPHPExt\\Test\\iterateArray" = @import("testing/iteration.zig").iterateArray,
-        .@"MyPHPExt\\Test\\lookupKey" = @import("testing/iteration.zig").lookupKey,
-        .@"MyPHPExt\\Test\\storeKey" = @import("testing/iteration.zig").storeKey,
-        .@"MyPHPExt\\Test\\deleteKey" = @import("testing/iteration.zig").deleteKey,
-        .@"MyPHPExt\\Test\\iterateWhileMutating" = @import("testing/iteration.zig").iterateWhileMutating,
-        .@"MyPHPExt\\Test\\buildList" = @import("testing/iteration.zig").buildList,
-        .@"MyPHPExt\\Test\\checkArrayCallbacks" = @import("testing/boundaries.zig").checkArrayCallbacks,
-        .@"MyPHPExt\\Test\\checkObjectPropertyHandlers" = @import("testing/boundaries.zig").checkObjectPropertyHandlers,
-        .@"MyPHPExt\\Test\\checkObjectCreation" = @import("testing/boundaries.zig").checkObjectCreation,
-        .@"MyPHPExt\\Test\\lookupClass" = @import("testing/class_entry.zig").lookupClass,
-        .@"MyPHPExt\\Test\\readStaticProperty" = @import("testing/class_entry.zig").readStaticProperty,
-        .@"MyPHPExt\\Test\\checkConstantMetadata" = @import("testing/class_entry.zig").checkConstantMetadata,
-        .@"MyPHPExt\\Test\\readConstant" = @import("testing/class_entry.zig").readConstant,
-        .@"MyPHPExt\\Test\\readClassConstant" = @import("testing/class_entry.zig").readClassConstant,
-        .@"MyPHPExt\\Test\\setMixedProperty" = @import("testing/properties.zig").setMixedProperty,
-        .@"MyPHPExt\\Test\\setMixedReferenceProperty" = @import("testing/properties.zig").setMixedProperty,
-        .@"MyPHPExt\\Test\\castValue" = @import("testing/zval.zig").castValue,
-        .@"MyPHPExt\\Test\\castReferenceValue" = @import("testing/zval.zig").castValue,
+        .@"MyPHPExt\\Test\\cloneObject" = object_tests.cloneObject,
+        .@"MyPHPExt\\Test\\objectProperties" = object_tests.objectProperties,
+        .@"MyPHPExt\\Test\\hasObjectProperty" = object_tests.hasObjectProperty,
+        .@"MyPHPExt\\Test\\initObject" = object_tests.initObject,
+        .@"MyPHPExt\\Test\\constructObject" = object_tests.constructObject,
+        .@"MyPHPExt\\Test\\objectView" = object_access.objectView,
+        .@"MyPHPExt\\Test\\readObjectNative" = object_access.readObjectNative,
+        .@"MyPHPExt\\Test\\writeObjectNative" = object_access.writeObjectNative,
+        .@"MyPHPExt\\Test\\objectDimension" = object_access.objectDimension,
+        .@"MyPHPExt\\Test\\checkObjectViews" = object_access.checkObjectViews,
+        .@"MyPHPExt\\Test\\checkZendStrings" = string_tests.checkZendStrings,
+        .@"MyPHPExt\\Test\\copyArray" = array_tests.copyArray,
+        .@"MyPHPExt\\Test\\separateArray" = array_tests.separateArray,
+        .@"MyPHPExt\\Test\\mergeArray" = array_tests.mergeArray,
+        .@"MyPHPExt\\Test\\compareArrays" = array_tests.compareArrays,
+        .@"MyPHPExt\\Test\\checkArrayHashTable" = array_tests.checkArrayHashTable,
+        .@"MyPHPExt\\Test\\isArrayList" = array_tests.isArrayList,
+        .@"MyPHPExt\\Test\\arrayToList" = array_tests.arrayToList,
+        .@"MyPHPExt\\Test\\iterateArray" = iteration.iterateArray,
+        .@"MyPHPExt\\Test\\lookupKey" = iteration.lookupKey,
+        .@"MyPHPExt\\Test\\storeKey" = iteration.storeKey,
+        .@"MyPHPExt\\Test\\deleteKey" = iteration.deleteKey,
+        .@"MyPHPExt\\Test\\iterateWhileMutating" = iteration.iterateWhileMutating,
+        .@"MyPHPExt\\Test\\buildList" = iteration.buildList,
+        .@"MyPHPExt\\Test\\checkArrayCallbacks" = boundaries.checkArrayCallbacks,
+        .@"MyPHPExt\\Test\\checkObjectPropertyHandlers" = boundaries.checkObjectPropertyHandlers,
+        .@"MyPHPExt\\Test\\checkObjectCreation" = boundaries.checkObjectCreation,
+        .@"MyPHPExt\\Test\\lookupClass" = class_entry.lookupClass,
+        .@"MyPHPExt\\Test\\readStaticProperty" = class_entry.readStaticProperty,
+        .@"MyPHPExt\\Test\\checkConstantMetadata" = class_entry.checkConstantMetadata,
+        .@"MyPHPExt\\Test\\readConstant" = class_entry.readConstant,
+        .@"MyPHPExt\\Test\\readClassConstant" = class_entry.readClassConstant,
+        .@"MyPHPExt\\Test\\setMixedProperty" = property_tests.setMixedProperty,
+        .@"MyPHPExt\\Test\\setMixedReferenceProperty" = property_tests.setMixedProperty,
+        .@"MyPHPExt\\Test\\castValue" = zval_tests.castValue,
+        .@"MyPHPExt\\Test\\castReferenceValue" = zval_tests.castValue,
     });
 
     phpz.module(.{

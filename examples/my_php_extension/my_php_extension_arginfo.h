@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 5edceef741a7aa238ec61c7265fd29d5c87e90b4 */
+ * Stub hash: cccb9cb12f6e4e0efc365882a210fd737001cfb8 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -100,6 +100,9 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkStringWriteFa
 ZEND_END_ARG_INFO()
 
 #define arginfo_MyPHPExt_Test_checkZendStrings arginfo_hello
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkNativeTsrmThreads, 0, 0, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_objectView, 0, 2, IS_ARRAY, 1)
 	ZEND_ARG_TYPE_INFO(0, object, IS_OBJECT, 0)
@@ -320,8 +323,7 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_MyPHPExt_Test_allocatorBailout arginfo_MyPHPExt_Test_iterateWhileMutating
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_allocatorAlignment, 0, 0, _IS_BOOL, 0)
-ZEND_END_ARG_INFO()
+#define arginfo_MyPHPExt_Test_allocatorAlignment arginfo_MyPHPExt_Test_checkNativeTsrmThreads
 
 #define arginfo_MyPHPExt_Test_nativeOutOfMemory arginfo_hello
 
@@ -446,13 +448,13 @@ ZEND_END_ARG_INFO()
 
 #define arginfo_class_MyPHPExt_Collection_rewind arginfo_hello
 
-#define arginfo_class_MyPHPExt_Collection_valid arginfo_MyPHPExt_Test_allocatorAlignment
+#define arginfo_class_MyPHPExt_Collection_valid arginfo_MyPHPExt_Test_checkNativeTsrmThreads
 
 #define arginfo_class_MyPHPExt_Config_greeting arginfo_class_MyPHPExt_Entity_label
 
 #define arginfo_class_MyPHPExt_Config_maxUsers arginfo_class_MyPHPExt_Identifiable_getId
 
-#define arginfo_class_MyPHPExt_Config_debugEnabled arginfo_MyPHPExt_Test_allocatorAlignment
+#define arginfo_class_MyPHPExt_Config_debugEnabled arginfo_MyPHPExt_Test_checkNativeTsrmThreads
 
 #define arginfo_class_MyPHPExt_Config_mode arginfo_class_MyPHPExt_Entity_label
 
@@ -521,6 +523,7 @@ ZEND_FUNCTION(MyPHPExt_Test_checkStringArguments);
 ZEND_FUNCTION(MyPHPExt_Test_checkZvalStrings);
 ZEND_FUNCTION(MyPHPExt_Test_checkStringWriteFailure);
 ZEND_FUNCTION(MyPHPExt_Test_checkZendStrings);
+ZEND_FUNCTION(MyPHPExt_Test_checkNativeTsrmThreads);
 ZEND_FUNCTION(MyPHPExt_Test_objectView);
 ZEND_FUNCTION(MyPHPExt_Test_readObjectNative);
 ZEND_FUNCTION(MyPHPExt_Test_writeObjectNative);
@@ -740,6 +743,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkZendStrings"), zif_MyPHPExt_Test_checkZendStrings, arginfo_MyPHPExt_Test_checkZendStrings, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkZendStrings"), zif_MyPHPExt_Test_checkZendStrings, arginfo_MyPHPExt_Test_checkZendStrings, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkNativeTsrmThreads"), zif_MyPHPExt_Test_checkNativeTsrmThreads, arginfo_MyPHPExt_Test_checkNativeTsrmThreads, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkNativeTsrmThreads"), zif_MyPHPExt_Test_checkNativeTsrmThreads, arginfo_MyPHPExt_Test_checkNativeTsrmThreads, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "objectView"), zif_MyPHPExt_Test_objectView, arginfo_MyPHPExt_Test_objectView, 0, NULL, NULL)
