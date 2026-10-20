@@ -4,9 +4,9 @@ const c = @import("c.zig").c;
 const phpz_options = @import("phpz_options");
 
 const zts = c.USING_ZTS != 0;
-const owns_cache = zts and phpz_options.shared;
+const owns_cache = zts and phpz_options.shared and phpz_options.static_tsrmls_cache;
 
-/// Refresh the shared extension's TSRM cache; no-op for NTS or built-in modules.
+/// Refresh the shared extension's TSRM cache; no-op when disabled, NTS, or built-in.
 pub fn updateCache() void {
     if (comptime owns_cache) c.phpz_tsrm_ls_cache_update();
 }

@@ -115,7 +115,7 @@ fn makePhpHookFn(comptime hook_fn: PhpHookFn) *const fn (c_int, c_int) callconv(
 }
 
 fn makePhpRequestStartupFn(comptime hook_fn: ?PhpHookFn) ?*const fn (c_int, c_int) callconv(.c) c.zend_result {
-    if (hook_fn == null and (c.USING_ZTS == 0 or !phpz_options.shared)) return null;
+    if (hook_fn == null and (c.USING_ZTS == 0 or !phpz_options.shared or !phpz_options.static_tsrmls_cache)) return null;
     return struct {
         fn handle(module_type: c_int, module_number: c_int) callconv(.c) c.zend_result {
             tsrm.updateCache();

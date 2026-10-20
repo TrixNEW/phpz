@@ -41,6 +41,15 @@ pub const Options = struct {
     /// PHP library. Static PHP libraries can be built with StaticPHP (SPC).
     shared: bool = true,
 
+    /// Extension LTO: null keeps the platform/build-mode default.
+    /// The addExtension() command-line option -Dlto takes precedence.
+    lto: ?bool = null,
+
+    /// Use static TSRM caches for ZTS builds; ignored by NTS PHP.
+    /// Shared builds own a cache, while built-in builds use PHP's cache.
+    /// Disable to access TSRM through its runtime lookup functions instead.
+    static_tsrmls_cache: bool = true,
+
     /// Maximum stack frames included in PHP memory leak reports.
     /// Applies when using php_allocator with a debug PHP build.
     debug_leak_trace_frames: usize = 3,
@@ -99,8 +108,10 @@ pub fn initInner(b: *Build, options: Options) Phpz {
         },
         else => {},
     }
-    mod.addCMacro("PHPZ_STATIC_TSRMLS_CACHE", "1");
-    mod.addCMacro("ZEND_ENABLE_STATIC_TSRMLS_CACHE", "1");
+    if (options.static_tsrmls_cache) {
+        mod.addCMacro("PHPZ_STATIC_TSRMLS_CACHE", "1");
+        mod.addCMacro("ZEND_ENABLE_STATIC_TSRMLS_CACHE", "1");
+    }
     if (options.shared) mod.addCMacro("ZEND_COMPILE_DL_EXT", "1");
     mod.addCSourceFile(.{
         .file = b.path("build/phpz_wrapper.c"),
@@ -110,6 +121,7 @@ pub fn initInner(b: *Build, options: Options) Phpz {
 
     const mod_opts = b.addOptions();
     mod_opts.addOption(bool, "shared", options.shared);
+    mod_opts.addOption(bool, "static_tsrmls_cache", options.static_tsrmls_cache);
     mod_opts.addOption(usize, "debug_leak_trace_frames", options.debug_leak_trace_frames);
     mod.addOptions("phpz_options", mod_opts);
     return .{ .mod = mod, .c = c, .options = options };
@@ -127,7 +139,7 @@ fn createPhpCTranslator(b: *Build, options: Options) Translator {
     // phpz.h
     c.addIncludePath(b.path("build"));
     c.defineCMacro("PHPZ_TRANSLATE_C", "1");
-    c.defineCMacro("PHPZ_STATIC_TSRMLS_CACHE", "1");
+    if (options.static_tsrmls_cache) c.defineCMacro("PHPZ_STATIC_TSRMLS_CACHE", "1");
     if (translator_options.target.result.abi.isMusl()) c.defineCMacro("PHPZ_MUSL", "1");
 
     // Configure PHP include paths for the C preprocessor
@@ -192,7 +204,7 @@ pub fn addExtension(self: Phpz, b: *Build, options: Build.LibraryOptions) *Build
         else => {},
     }
 
-    if (b.option(bool, "lto", "Enable link time optimization for the extension")) |enabled| {
+    if (b.option(bool, "lto", "Enable link time optimization for the extension") orelse self.options.lto) |enabled| {
         lib.lto = if (enabled) .full else .none;
     } else if (self.options.shared and (lib.root_module.optimize orelse .debug) != .debug) {
         // Zig 0.17's Mach-O linker does not support LTO, and its LLD integration
