@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 6f797c47742cb3078a702fe3ac742f18474c36b3 */
+ * Stub hash: 5edceef741a7aa238ec61c7265fd29d5c87e90b4 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -158,6 +158,11 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_storeKey, 0, 3, IS
 	ZEND_ARG_TYPE_INFO(0, values, IS_ARRAY, 0)
 	ZEND_ARG_TYPE_INFO(0, key, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_deleteKey, 0, 2, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, values, IS_ARRAY, 0)
+	ZEND_ARG_TYPE_INFO(0, key, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_iterateWhileMutating, 0, 0, IS_ARRAY, 0)
@@ -528,6 +533,7 @@ ZEND_FUNCTION(MyPHPExt_Test_arrayToList);
 ZEND_FUNCTION(MyPHPExt_Test_iterateArray);
 ZEND_FUNCTION(MyPHPExt_Test_lookupKey);
 ZEND_FUNCTION(MyPHPExt_Test_storeKey);
+ZEND_FUNCTION(MyPHPExt_Test_deleteKey);
 ZEND_FUNCTION(MyPHPExt_Test_iterateWhileMutating);
 ZEND_FUNCTION(MyPHPExt_Test_buildList);
 ZEND_FUNCTION(MyPHPExt_Test_checkObjectPropertyHandlers);
@@ -794,6 +800,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "storeKey"), zif_MyPHPExt_Test_storeKey, arginfo_MyPHPExt_Test_storeKey, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "storeKey"), zif_MyPHPExt_Test_storeKey, arginfo_MyPHPExt_Test_storeKey, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "deleteKey"), zif_MyPHPExt_Test_deleteKey, arginfo_MyPHPExt_Test_deleteKey, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "deleteKey"), zif_MyPHPExt_Test_deleteKey, arginfo_MyPHPExt_Test_deleteKey, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "iterateWhileMutating"), zif_MyPHPExt_Test_iterateWhileMutating, arginfo_MyPHPExt_Test_iterateWhileMutating, 0, NULL, NULL)

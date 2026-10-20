@@ -50,6 +50,9 @@ foreach ([[0, 0], [1, 0], [8, 8], [9, 8], [100, 3]] as [$count, $capacity]) {
     $list[] = 'next';
     if (array_key_last($list) !== $count) echo "list $count/$capacity next index wrong\n";
 }
+if (buildList(9, 8, null) !== [null, 1, null, 3, null, 5, null, 7, null]) {
+    echo "null list mismatch\n";
+}
 echo "done\n";
 ?>
 --EXPECT--

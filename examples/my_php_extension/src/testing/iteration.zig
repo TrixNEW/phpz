@@ -145,3 +145,11 @@ pub fn storeKey(ctx: phpz.Ctx, values: *Array, key: []const u8, value: *Zval) !v
     result.symtableDelete("drop") catch {};
     ctx.retval.set(.array, result);
 }
+
+/// PHP: MyPHPExt\Test\deleteKey(array $values, string $key): array
+pub fn deleteKey(values: *Array, key: []const u8) !*Array {
+    const result = values.dupe();
+    errdefer result.release();
+    try result.symtableDelete(key);
+    return result;
+}

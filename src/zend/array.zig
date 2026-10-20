@@ -95,8 +95,8 @@ pub const Array = opaque {
     /// Ownership: the array takes ownership of `value`'s zval contents. If
     /// `value` is borrowed and must remain independently owned, addref/copy it
     /// before calling. The returned pointer is borrowed from the array.
-    pub fn update(self: *Array, key: []const u8, value: *c.zval) ?*c.zval {
-        return c.zend_hash_str_update(self.ptr(), key.ptr, key.len, value);
+    pub fn update(self: *Array, key: []const u8, value: *c.zval) *c.zval {
+        return c.zend_hash_str_update(self.ptr(), key.ptr, key.len, value).?;
     }
 
     /// Add a new value by string key (fails if key exists).
@@ -109,8 +109,8 @@ pub const Array = opaque {
 
     /// Like update(), with a borrowed Zend string key retained on insertion.
     /// No numeric-string conversion. Requires mutable, uniquely owned storage.
-    pub fn updateStr(self: *Array, key: *String, value: *c.zval) ?*c.zval {
-        return c.zend_hash_update(self.ptr(), key.ptr(), value);
+    pub fn updateStr(self: *Array, key: *String, value: *c.zval) *c.zval {
+        return c.zend_hash_update(self.ptr(), key.ptr(), value).?;
     }
 
     /// Like updateStr(), but returns null if the key exists and leaves value owned
@@ -124,8 +124,8 @@ pub const Array = opaque {
     /// Ownership: the array takes ownership of `value`'s zval contents. If
     /// `value` is borrowed and must remain independently owned, addref/copy it
     /// before calling. The returned pointer is borrowed from the array.
-    pub fn updateIndex(self: *Array, index: isize, value: *c.zval) ?*c.zval {
-        return c.zend_hash_index_update(self.ptr(), @bitCast(index), value);
+    pub fn updateIndex(self: *Array, index: isize, value: *c.zval) *c.zval {
+        return c.zend_hash_index_update(self.ptr(), @bitCast(index), value).?;
     }
 
     /// Add a new value by index (fails if index exists).
@@ -199,17 +199,20 @@ pub const Array = opaque {
     /// Find a value like PHP's `$array[$key]`: canonical integer strings such as
     /// "42" or "-1" address integer keys. Ownership follows find().
     pub fn symtableFind(self: *Array, key: []const u8) ?*c.zval {
+        if (key.len == 0 or (key.len == 1 and key[0] == '-')) return self.find(key);
         return c.zend_symtable_str_find(self.ptr(), key.ptr, key.len);
     }
 
     /// Add or update like PHP's `$array[$key] = $value`. Ownership follows update().
     /// Requires mutable, uniquely owned storage.
     pub fn symtableUpdate(self: *Array, key: []const u8, value: *c.zval) *c.zval {
+        if (key.len == 0 or (key.len == 1 and key[0] == '-')) return self.update(key, value);
         return c.zend_symtable_str_update(self.ptr(), key.ptr, key.len, value).?;
     }
 
     /// Delete like PHP's `unset($array[$key])`, destroying the stored value.
     pub fn symtableDelete(self: *Array, key: []const u8) Error!void {
+        if (key.len == 0 or (key.len == 1 and key[0] == '-')) return self.delete(key);
         if (c.zend_symtable_str_del(self.ptr(), key.ptr, key.len) != c.SUCCESS) return Error.NotFound;
     }
 
@@ -500,6 +503,8 @@ pub const Array = opaque {
     }
 
     /// Builds a list (keys 0..n-1) without hashing, like ZEND_HASH_FILL_PACKED.
+    /// Appended values must not be IS_UNDEF, including after dereferencing
+    /// .mixed inputs. Use null for an empty value.
     /// The builder owns the array: append, then finish() before any other use.
     /// A Zend bailout while building leaks the unfinished entries until request shutdown.
     pub const ListBuilder = struct {
@@ -521,6 +526,7 @@ pub const Array = opaque {
 
         /// Append the next element; ownership follows `Zval.raw.set`.
         pub inline fn append(self: *ListBuilder, comptime zk: Zval.Kind, value: Zval.Type(zk)) void {
+            if (zk == .undef) @compileError("expected a defined value, found IS_UNDEF");
             if (self.cursor == self.end) self.* = grow(self.*);
             Zval.raw.set(&self.cursor[0], zk, value);
             self.cursor += 1;
@@ -528,12 +534,13 @@ pub const Array = opaque {
 
         /// Like append(), for builders created with enough capacity for every element.
         pub inline fn appendAssumeCapacity(self: *ListBuilder, comptime zk: Zval.Kind, value: Zval.Type(zk)) void {
+            if (zk == .undef) @compileError("expected a defined value, found IS_UNDEF");
             std.debug.assert(self.cursor != self.end);
             Zval.raw.set(&self.cursor[0], zk, value);
             self.cursor += 1;
         }
 
-        /// Append an initialized zval, transferring its contents without addref.
+        /// Append a non-IS_UNDEF zval, transferring its contents without addref.
         pub inline fn appendValue(self: *ListBuilder, value: *const c.zval) void {
             if (self.cursor == self.end) self.* = grow(self.*);
             Zval.raw.copyValue(&self.cursor[0], value);
