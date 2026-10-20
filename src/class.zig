@@ -956,7 +956,7 @@ fn bindInstanceMethod(comptime class_name: [:0]const u8, comptime T: type, compt
         fn invoke(ctx: Context) anyerror!void {
             const self = ClassType.receiver(ctx.call) orelse return;
             const backing = self.backing() orelse {
-                errors.throwError(null, class_name ++ " object is not initialized; call its constructor first", .{}) catch {};
+                errors.throwError(null, class_name ++ " object has no initialized backing", .{}) catch {};
                 return;
             };
             const value = try functions.invoke(func, ctx, backing);

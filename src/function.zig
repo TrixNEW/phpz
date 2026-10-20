@@ -346,7 +346,7 @@ pub fn invoke(comptime func: anytype, ctx: anytype, receiver: anytype) anyerror!
         }
         break :blk arg_specs;
     };
-    var resolved_callables: [callable_count]zend.Callable = @splat(.nil);
+    var resolved_callables: [callable_count]zend.Callable = undefined;
     if (comptime php_params_count == 0) {
         if (comptime !has_context) try ctx.call.expectNoArgs();
     } else {
