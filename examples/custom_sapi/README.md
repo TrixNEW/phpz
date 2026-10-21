@@ -81,15 +81,15 @@ Use these APIs inside an active request:
 
 | Input | API | Behavior |
 | --- | --- | --- |
-| Code without `<?php` | `phpz.tryEval(code, null, name)` | Leaves exceptions pending as `error.PhpException`; `name` identifies diagnostics. |
+| Code without `<?php` | `phpz.tryEval(code, null, name)` | Leaves ordinary exceptions pending as `error.PhpException` and exit/die as `error.UnwindExit`; `name` identifies diagnostics. |
 | Script file | `phpz.tryExecuteScript(file)` | Uses PHP's script runner, which reports exceptions and returns `error.ScriptExecutionFailed` for internally caught failures. |
 
 For a file, initialize `zend.FileHandle` inside `zend.bailout.run`, set
 `setPrimaryScript(true)`, and call `deinit()` before request shutdown. The handle
 copies the filename and opens the file lazily; initialization can itself bail out.
 
-`phpz.errors.takeUnwindExit()` consumes a pending `exit`/`die` signal and returns
-`?phpz.errors.ExitStatus` (`.ok = 0`, with unnamed exit codes preserved). It leaves
+`phpz.exception.takeUnwindExit()` consumes a pending `exit`/`die` signal and returns
+`?phpz.exception.ExitStatus` (`.ok = 0`, with unnamed exit codes preserved). It leaves
 ordinary exceptions untouched. PHP's file runner can return failure even for
 `exit(0)`; follow the status and fatal-error checks in the example. Check the
 final exit status after request shutdown, which can also fail.

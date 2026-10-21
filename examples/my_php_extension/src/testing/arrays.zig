@@ -231,8 +231,8 @@ fn checkReverseApply() !void {
         try std.testing.expectEqualSlices(i64, &.{ 3, 2 }, Callback.seen[0..2]);
         try expect(!table.has("last") and !table.hasIndex(2));
         const result = table.reverseApply(Callback.fail);
-        const pending = phpz.errors.hasException();
-        phpz.errors.clearException();
+        const pending = phpz.exception.hasPending();
+        phpz.exception.clear();
         try std.testing.expectError(error.PhpException, result);
         try expect(pending and table.len() == 2);
     }

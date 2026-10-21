@@ -222,14 +222,14 @@ pub fn checkStringWriteFailure(ctx: phpz.Ctx, object: *phpz.zend.Object, api: []
     else
         return error.UnknownPropertyAPI;
 
-    const pending = phpz.errors.exception();
+    const pending = phpz.exception.get();
     const expected_exception = if (pending) |exception|
         std.mem.eql(u8, exception_name, exception.class().name())
     else
         false;
     // A __set() exception trace may temporarily retain the string argument.
     // Clear it before checking ownership and before assertions can throw.
-    phpz.errors.clearException();
+    phpz.exception.clear();
     try std.testing.expectError(error.PhpException, result);
     try std.testing.expect(expected_exception);
     try std.testing.expectEqual(@as(u32, 1), str.refcount());

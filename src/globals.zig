@@ -3,10 +3,10 @@ const builtin = @import("builtin");
 
 const abi = @import("abi.zig");
 const c = @import("c.zig").c;
-const errors = @import("errors.zig");
-const Zval = @import("zval.zig").Zval;
-const zend = @import("zend.zig");
+const exception_helper = @import("exception.zig");
 const SapiGlobals = @import("sapi.zig").Globals;
+const zend = @import("zend.zig");
+const Zval = @import("zval.zig").Zval;
 
 pub const GlobalAccess = enum { ptr, value };
 
@@ -133,7 +133,7 @@ pub const ExecutorGlobals = opaque {
         return @ptrCast(@alignCast(self));
     }
 
-    pub fn exitStatus(self: *ExecutorGlobals) errors.ExitStatus {
+    pub fn exitStatus(self: *ExecutorGlobals) exception_helper.ExitStatus {
         return @fromBackingInt(@intCast(self.ptr().exit_status));
     }
 

@@ -32,9 +32,9 @@ const BigInteger = struct {
                 var digits = text;
                 const negative = text.len != 0 and text[0] == '-';
                 if (text.len != 0 and (negative or text[0] == '+')) digits = text[1..];
-                if (digits.len == 0) return phpz.errors.argumentValueError(1, "must be a decimal integer", .{});
+                if (digits.len == 0) return phpz.exception.argumentValueError(1, "must be a decimal integer", .{});
                 for (digits) |ch| {
-                    if (!std.ascii.isDigit(ch)) return phpz.errors.argumentValueError(1, "must be a decimal integer", .{});
+                    if (!std.ascii.isDigit(ch)) return phpz.exception.argumentValueError(1, "must be a decimal integer", .{});
                 }
                 try self.integer.setString(10, digits);
                 if (negative and !self.integer.eqlZero()) self.integer.setSign(false);

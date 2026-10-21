@@ -2,7 +2,7 @@
 const std = @import("std");
 
 const c = @import("c.zig").c;
-const errors = @import("errors.zig");
+const exception = @import("exception.zig");
 const globals = @import("globals.zig");
 const zend = @import("zend.zig");
 
@@ -54,7 +54,7 @@ pub const ScopeObject = extern struct {
     }
 
     fn getConstructor(_: ?*c.zend_object) callconv(.c) ?*c.zend_function {
-        errors.throwError(null, "Instantiation of a Phpz guard scope is not allowed", .{}) catch {};
+        exception.throwError(null, "Instantiation of a Phpz guard scope is not allowed", .{}) catch {};
         return null;
     }
 

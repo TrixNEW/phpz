@@ -18,7 +18,7 @@ const Counter = struct {
 
     /// PHP: MyPHPExt\ClosureCounter::__construct(): void
     pub fn __construct() !Counter {
-        return phpz.errors.throwError(null, "Cannot directly construct MyPHPExt\\ClosureCounter", .{});
+        return phpz.exception.throwError(null, "Cannot directly construct MyPHPExt\\ClosureCounter", .{});
     }
 
     /// PHP: MyPHPExt\ClosureCounter::__invoke(int $step = 1): int
@@ -58,7 +58,7 @@ const Reference = struct {
 
     /// PHP: MyPHPExt\ClosureRef::__construct(): void
     pub fn __construct() !Reference {
-        return phpz.errors.throwError(null, "Cannot directly construct MyPHPExt\\ClosureRef", .{});
+        return phpz.exception.throwError(null, "Cannot directly construct MyPHPExt\\ClosureRef", .{});
     }
 
     /// PHP: MyPHPExt\ClosureRef::__invoke(): mixed (returns by reference)

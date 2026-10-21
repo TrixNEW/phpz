@@ -50,6 +50,7 @@ pub const GuardScope = @import("guard.zig").Scope;
 pub const Stream = @import("stream.zig").Stream;
 
 pub const errors = @import("errors.zig");
+pub const exception = @import("exception.zig");
 
 pub fn printf(fmt: [:0]const u8, args: anytype) usize {
     return @call(.auto, c.php_printf, .{fmt.ptr} ++ args);
@@ -71,17 +72,17 @@ pub fn tryExecuteScript(file: *zend.FileHandle) (error{ScriptExecutionFailed} ||
 
 /// Evaluate PHP code in the active request. Exceptions remain pending; bailouts
 /// propagate to the caller's boundary. Standalone hosts should use tryEval.
-pub fn eval(code: []const u8, retval: ?*Zval, name: [:0]const u8) error{ CodeExecutionFailed, PhpException }!void {
+pub fn eval(code: []const u8, retval: ?*Zval, name: [:0]const u8) (error{CodeExecutionFailed} || exception.Error)!void {
     const result = c.zend_eval_stringl(code.ptr, code.len, if (retval) |value| value.ptr() else null, name.ptr);
-    if (errors.hasException()) return error.PhpException;
+    try exception.check();
     if (result != c.SUCCESS) return error.CodeExecutionFailed;
 }
 
 /// Like eval, but converts a PHP bailout to error.ZendBailout. Ordinary PHP
-/// exceptions still return PhpException and remain pending for the caller.
+/// exceptions return PhpException, exit/die returns UnwindExit; both remain pending for the caller.
 /// After a bailout, finish request shutdown instead of continuing PHP execution.
 /// This boundary does not include subsequent exception reporting or cleanup.
-pub fn tryEval(code: []const u8, retval: ?*Zval, name: [:0]const u8) (error{ CodeExecutionFailed, PhpException } || zend.bailout.Error)!void {
+pub fn tryEval(code: []const u8, retval: ?*Zval, name: [:0]const u8) (error{CodeExecutionFailed} || exception.Error || zend.bailout.Error)!void {
     return zend.bailout.run(eval, .{ code, retval, name });
 }
 
@@ -90,6 +91,7 @@ test {
     _ = @import("class.zig");
     _ = @import("closure.zig");
     _ = @import("errors.zig");
+    _ = @import("exception.zig");
     _ = @import("function.zig");
     _ = @import("globals.zig");
     _ = @import("gc.zig");

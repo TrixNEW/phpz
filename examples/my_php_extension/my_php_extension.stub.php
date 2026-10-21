@@ -222,6 +222,8 @@ namespace MyPHPExt\Test {
     function objectDimension(object $object, string $action, mixed $offset, mixed $input): mixed {}
     function checkObjectViews(array $empty): void {}
     function checkArrayCallbacks(): void {}
+    function readLastError(bool $clear_exception): ?array {}
+    function checkExceptionBoundary(string $api, mixed $value): void {}
     function checkArrayHashTable(array $references): void {}
     function isArrayList(array $source): bool {}
     function arrayToList(array $source): array {}

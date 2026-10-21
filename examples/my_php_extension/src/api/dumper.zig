@@ -10,7 +10,7 @@ pub fn dump(ctx: phpz.Ctx) !void {
     }
 }
 
-fn dumpValue(value: *phpz.Zval, depth: usize) phpz.errors.Exception!void {
+fn dumpValue(value: *phpz.Zval, depth: usize) phpz.exception.Error!void {
     switch (value.kind()) {
         .null => {
             indent(depth);

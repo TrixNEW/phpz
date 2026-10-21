@@ -4,7 +4,7 @@ const std = @import("std");
 
 const c = @import("c.zig").c;
 const CallFrame = @import("ctx.zig").CallFrame;
-const errors = @import("errors.zig");
+const exception = @import("exception.zig");
 const functions = @import("function.zig");
 const GcBuffer = @import("gc.zig").GcBuffer;
 const globals = @import("globals.zig");
@@ -273,22 +273,22 @@ fn Resolved(comptime T: type) type {
                             const op: Operator = @fromBackingInt(opcode);
                             @as(anyerror!void, options.operate(op, lhs, rhs, Zval.from(result.?))) catch |err| {
                                 zend.bailout.propagate(err);
-                                if (errors.hasException()) return c.FAILURE;
+                                if (exception.hasPending()) return c.FAILURE;
                                 const symbol = op.symbol();
                                 if (err == error.Unsupported) {
                                     if (symbol) |sigil|
                                         if (rhs) |right| {
-                                            errors.typeError("Unsupported operand types: %s %s %s", .{ lhs.getTypeName(), sigil.ptr, right.getTypeName() }) catch {};
+                                            exception.typeError("Unsupported operand types: %s %s %s", .{ lhs.getTypeName(), sigil.ptr, right.getTypeName() }) catch {};
                                         } else {
-                                            errors.typeError("Unsupported operand type: %s%s", .{ sigil.ptr, lhs.getTypeName() }) catch {};
+                                            exception.typeError("Unsupported operand type: %s%s", .{ sigil.ptr, lhs.getTypeName() }) catch {};
                                         }
                                     else {
-                                        errors.typeError("Unsupported operator opcode %u for " ++ class_name, .{@as(c_uint, opcode)}) catch {};
+                                        exception.typeError("Unsupported operator opcode %u for " ++ class_name, .{@as(c_uint, opcode)}) catch {};
                                     }
                                 } else if (symbol) |sigil| {
-                                    errors.throwError(null, class_name ++ " operator %s failed: %s", .{ sigil.ptr, @errorName(err).ptr }) catch {};
+                                    exception.throwError(null, class_name ++ " operator %s failed: %s", .{ sigil.ptr, @errorName(err).ptr }) catch {};
                                 } else {
-                                    errors.throwError(null, class_name ++ " operator unknown(%u) failed: %s", .{ @as(c_uint, opcode), @errorName(err).ptr }) catch {};
+                                    exception.throwError(null, class_name ++ " operator unknown(%u) failed: %s", .{ @as(c_uint, opcode), @errorName(err).ptr }) catch {};
                                 }
                                 return c.FAILURE;
                             };
@@ -306,11 +306,11 @@ fn Resolved(comptime T: type) type {
                             const rhs = Zval.from(op2.?);
                             const result = @as(anyerror!Comparison, options.compare(lhs, rhs)) catch |err| {
                                 zend.bailout.propagate(err);
-                                if (!errors.hasException()) {
+                                if (!exception.hasPending()) {
                                     if (err == error.Uncomparable) {
-                                        errors.typeError("Cannot compare %s with %s", .{ lhs.getTypeName(), rhs.getTypeName() }) catch {};
+                                        exception.typeError("Cannot compare %s with %s", .{ lhs.getTypeName(), rhs.getTypeName() }) catch {};
                                     } else {
-                                        errors.throwError(null, "%s at " ++ class_name ++ " operator compare", .{@errorName(err).ptr}) catch {};
+                                        exception.throwError(null, "%s at " ++ class_name ++ " operator compare", .{@errorName(err).ptr}) catch {};
                                     }
                                 }
                                 return c.ZEND_UNCOMPARABLE;
@@ -642,8 +642,8 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
                 if (resolved.init) |initializer| {
                     intern.backingStorage().* = initializer() catch |err| {
                         zend.bailout.propagate(err);
-                        if (!errors.hasException()) {
-                            errors.throwError(null, "%s while initializing " ++ class_name, .{@errorName(err).ptr}) catch {};
+                        if (!exception.hasPending()) {
+                            exception.throwError(null, "%s while initializing " ++ class_name, .{@errorName(err).ptr}) catch {};
                         }
                         // Keep __destruct off the half-built object, as Zend does for failed constructors.
                         c.zend_object_store_ctor_failed(&intern.std);
@@ -663,15 +663,15 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
                 const source: *Self = .fromStdUnchecked(obj.?);
                 const target = alloc(obj.?.ce.?);
                 const source_backing: *const T = source.backing() orelse {
-                    errors.throwError(null, "Cannot clone uninitialized " ++ class_name, .{}) catch {};
+                    exception.throwError(null, "Cannot clone uninitialized " ++ class_name, .{}) catch {};
                     c.zend_object_store_ctor_failed(&target.std);
                     return &target.std;
                 };
                 const cloner = resolved.clone orelse unreachable;
                 const cloned = cloner(source_backing) catch |err| {
                     zend.bailout.propagate(err);
-                    if (!errors.hasException()) {
-                        errors.throwError(null, "%s while cloning " ++ class_name, .{@errorName(err).ptr}) catch {};
+                    if (!exception.hasPending()) {
+                        exception.throwError(null, "%s while cloning " ++ class_name, .{@errorName(err).ptr}) catch {};
                     }
                     c.zend_object_store_ctor_failed(&target.std);
                     return &target.std;
@@ -710,11 +710,11 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
 
         fn receiver(call: *CallFrame) ?*Self {
             const obj = call.this() orelse {
-                errors.throwError(null, class_name ++ " must be called on an object", .{}) catch {};
+                exception.throwError(null, class_name ++ " must be called on an object", .{}) catch {};
                 return null;
             };
             return fromObject(obj) catch {
-                errors.throwError(null, "invalid object layout for " ++ class_name, .{}) catch {};
+                exception.throwError(null, "invalid object layout for " ++ class_name, .{}) catch {};
                 return null;
             };
         }
@@ -746,12 +746,12 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
 
         pub const FromError = error{ NotObject, InvalidObjectLayout };
 
-        /// Borrow this class wrapper after checking its handlers and class.
+        /// Borrow this class wrapper after verifying its layout through this class's handlers pointer.
         /// Compatible subclasses are accepted; backing may still be null.
         /// Does not change reference counts or throw a PHP exception.
         /// `register()` must have succeeded before calling this function.
         pub fn fromObject(obj: *zend.Object) FromError!*Self {
-            if (obj.ptr().handlers != &handlers or !obj.instanceof(entry)) {
+            if (obj.ptr().handlers != &handlers) {
                 return error.InvalidObjectLayout;
             }
             return .fromStdUnchecked(obj.ptr());
@@ -771,7 +771,7 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
             return fromObject(operand.asUnchecked(.object));
         }
 
-        pub const CreateError = errors.Exception;
+        pub const CreateError = exception.Error;
 
         /// Creates an instance through object_init_ex without calling its PHP constructor.
         /// Zend checks instantiability, updates class constants, and dispatches create_object.
@@ -782,7 +782,7 @@ fn BackedClass(comptime class_name: [:0]const u8, comptime T: type, comptime opt
         /// Ownership: caller owns the returned object reference; call
         /// `object().release()` unless ownership is transferred to PHP or a zval.
         /// Initialization exceptions release the object without calling its PHP
-        /// destructor and return PhpException, preserving the pending exception.
+        /// destructor and return PhpException or UnwindExit, preserving the pending exception.
         /// Zend bailouts propagate without running Zig defer/errdefer.
         /// `register()` must have succeeded before calling this function.
         /// The class's create_object callback must preserve this Self layout.
@@ -956,7 +956,7 @@ fn bindInstanceMethod(comptime class_name: [:0]const u8, comptime T: type, compt
         fn invoke(ctx: Context) anyerror!void {
             const self = ClassType.receiver(ctx.call) orelse return;
             const backing = self.backing() orelse {
-                errors.throwError(null, class_name ++ " object has no initialized backing", .{}) catch {};
+                exception.throwError(null, class_name ++ " object has no initialized backing", .{}) catch {};
                 return;
             };
             const value = try functions.invoke(func, ctx, backing);

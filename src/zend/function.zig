@@ -1,5 +1,5 @@
 const std = @import("std");
-const errors = @import("../errors.zig");
+const exception = @import("../exception.zig");
 const stub = @import("../stub.zig");
 const phpz = @import("../root.zig");
 const c = phpz.c;
@@ -11,9 +11,7 @@ const Object = @import("object.zig").Object;
 const Array = @import("array.zig").Array;
 
 pub const Function = opaque {
-    pub const Error = error{
-        PhpException,
-    };
+    pub const Error = exception.Error;
     pub const TryCallError = Error || bailout.Error;
 
     /// Function type classification.
@@ -130,7 +128,8 @@ pub const Function = opaque {
     /// String keys name arguments; integer keys append positional arguments and
     /// must precede string keys in iteration order. Matching and references follow Zend.
     ///
-    /// Returns `error.PhpException` if the called function throws a PHP exception.
+    /// Returns `error.PhpException` or `error.UnwindExit` if the called function throws a PHP
+    /// exception.
     pub fn call(self: *Function, retval: ?*c.zval, params: anytype, named_params: ?*Array) Error!void {
         try self.invoke(null, null, retval, params, named_params);
     }
@@ -145,7 +144,8 @@ pub const Function = opaque {
     /// Pass params as a tuple: `.{}`, `.{a}`, `.{a, b}`.
     /// Named arguments and ownership follow `call()`.
     ///
-    /// Returns `error.PhpException` if the called method throws a PHP exception.
+    /// Returns `error.PhpException` or `error.UnwindExit` if the called method throws a PHP
+    /// exception.
     pub fn callStatic(self: *Function, ce: *ClassEntry, retval: ?*c.zval, params: anytype, named_params: ?*Array) Error!void {
         try self.invoke(null, ce.ptr(), retval, params, named_params);
     }
@@ -160,7 +160,8 @@ pub const Function = opaque {
     /// Pass params as a tuple: `.{}`, `.{a}`, `.{a, b}`.
     /// Named arguments and ownership follow `call()`.
     ///
-    /// Returns `error.PhpException` if the called method throws a PHP exception.
+    /// Returns `error.PhpException` or `error.UnwindExit` if the called method throws a PHP
+    /// exception.
     pub fn callMethod(self: *Function, obj: *Object, retval: ?*c.zval, params: anytype, named_params: ?*Array) Error!void {
         try self.invoke(obj.ptr(), obj.class().ptr(), retval, params, named_params);
     }
@@ -193,7 +194,7 @@ pub const Function = opaque {
                 c.zend_call_known_function(self.ptr(), obj, scope, retval, @intCast(n), @ptrCast(&arr), if (named_params) |args| args.ptr() else null);
             },
         }
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
     }
 
     inline fn tryInvoke(
@@ -258,7 +259,7 @@ pub const Function = opaque {
                 try bailout.run(Context.call, .{&context});
             },
         }
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
     }
 };
 

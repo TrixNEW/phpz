@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const errors = @import("../errors.zig");
+const exception = @import("../exception.zig");
 const globals = @import("../globals.zig");
 const c = @import("../root.zig").c;
 const Zval = @import("../zval.zig").Zval;
@@ -48,16 +48,17 @@ pub const ClassEntry = opaque {
     /// When `autoload` is true, registered autoload callbacks are run if the
     /// class is not already loaded; they may execute arbitrary PHP code and
     /// trigger a Zend bailout. Returns null if the class cannot be found without
-    /// a pending exception; returns `error.PhpException` if one is pending after
+    /// a pending exception; returns `error.PhpException` or `error.UnwindExit` if one is pending
+    /// after
     /// lookup, including an exception raised by an autoloader.
     ///
     /// Ownership: borrowed class entry owned by the PHP runtime.
-    pub fn lookup(class_name: []const u8, autoload: bool) errors.Exception!?*ClassEntry {
+    pub fn lookup(class_name: []const u8, autoload: bool) exception.Error!?*ClassEntry {
         const zname = String.init(class_name, false);
         defer zname.release();
 
         const entry = c.zend_lookup_class_ex(zname.ptr(), null, if (autoload) 0 else c.ZEND_FETCH_CLASS_NO_AUTOLOAD);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
         return if (entry) |ce| .from(ce) else null;
     }
 
@@ -131,15 +132,15 @@ pub const ClassEntry = opaque {
     /// Read a constant from this registered class using the class itself as the
     /// access scope. Includes inherited constants and resolves constant expressions.
     /// Silent lookup returns null for missing/inaccessible constants; evaluation
-    /// exceptions are still reported as PhpException.
+    /// exceptions are still reported as PhpException or UnwindExit.
     ///
     /// Ownership: borrowed value owned by Zend; do not modify or release it.
-    pub fn constant(self: *ClassEntry, constant_name: []const u8, silent: bool) errors.Exception!?*Zval {
+    pub fn constant(self: *ClassEntry, constant_name: []const u8, silent: bool) exception.Error!?*Zval {
         const key = String.init(constant_name, false);
         defer key.release();
         const fetch_flags: u32 = if (silent) c.ZEND_FETCH_CLASS_EXCEPTION | c.ZEND_FETCH_CLASS_SILENT else c.ZEND_FETCH_CLASS_EXCEPTION;
         const value = c.zend_get_class_constant_ex(self.ptr().name, key.ptr(), self.ptr(), fetch_flags);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
         return if (value) |v| .from(v) else null;
     }
 
@@ -218,13 +219,13 @@ pub const ClassEntry = opaque {
         return if (case_obj) |obj| Object.from(obj) else null;
     }
 
-    pub const SetStaticPropertyError = error{ PhpException, UpdateStaticPropertyFailed };
+    pub const SetStaticPropertyError = error{UpdateStaticPropertyFailed} || exception.Error;
 
     /// Set static property value. Refcounted inputs are borrowed; `.mixed` must
     /// already be dereferenced. The caller keeps its input reference on
     /// both success and failure.
     /// `.reference` is not accepted; pass `reference.val()` with `.mixed` instead.
-    /// Returns `error.PhpException` for a pending PHP exception, otherwise
+    /// Returns `error.PhpException` or `error.UnwindExit` for a pending PHP exception, otherwise
     /// `error.UpdateStaticPropertyFailed` if Zend reports failure.
     pub fn setStaticProperty(self: *ClassEntry, comptime zk: Zval.Kind, prop_name: []const u8, prop_value: Zval.Type(zk)) SetStaticPropertyError!void {
         const ce = self.ptr();
@@ -246,22 +247,22 @@ pub const ClassEntry = opaque {
                 break :blk c.zend_update_static_property(ce, prop_name.ptr, prop_name.len, &zv);
             },
         };
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
         if (result != c.SUCCESS) return error.UpdateStaticPropertyFailed;
     }
 
     /// Read a static property using this class as the access scope.
     ///
-    /// Returns `error.PhpException` for a pending PHP exception, even if Zend
+    /// Returns `error.PhpException` or `error.UnwindExit` for a pending PHP exception, even if Zend
     /// returned a non-null pointer. A null result means Zend returned no slot
     /// without an exception, such as a missing property when `silent` is true.
     /// Silent reads can return an IS_UNDEF slot for an uninitialized typed
     /// property; they do not suppress exceptions from class initialization.
     ///
     /// Ownership: borrowed property slot owned by PHP; do not release it.
-    pub fn staticProperty(self: *ClassEntry, prop_name: []const u8, silent: bool) errors.Exception!?*Zval {
+    pub fn staticProperty(self: *ClassEntry, prop_name: []const u8, silent: bool) exception.Error!?*Zval {
         const val = c.zend_read_static_property(self.ptr(), prop_name.ptr, prop_name.len, silent);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
         return if (val) |value| .from(value) else null;
     }
 };

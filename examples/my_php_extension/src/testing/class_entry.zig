@@ -23,15 +23,15 @@ pub fn checkConstantMetadata() !void {
     try expectPhpException(broken.constant("VALUE", true));
 
     try std.testing.expect((try phpz.zend.Constant.get("MISSING_CONSTANT", null, true)) == null);
-    try std.testing.expect(!phpz.errors.hasException());
+    try std.testing.expect(!phpz.exception.hasPending());
     try std.testing.expect((try child.constant("MISSING", true)) == null);
-    try std.testing.expect(!phpz.errors.hasException());
+    try std.testing.expect(!phpz.exception.hasPending());
 }
 
-fn expectPhpException(result: phpz.errors.Exception!?*phpz.Zval) !void {
-    const pending = phpz.errors.hasException();
+fn expectPhpException(result: phpz.exception.Error!?*phpz.Zval) !void {
+    const pending = phpz.exception.hasPending();
     // Clear the PHP exception before assertions so it cannot mask a test failure.
-    phpz.errors.clearException();
+    phpz.exception.clear();
     try std.testing.expectError(error.PhpException, result);
     try std.testing.expect(pending);
 }

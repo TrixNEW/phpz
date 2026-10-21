@@ -114,8 +114,8 @@ pub fn checkObjectViews(empty: *Array) !void {
     try expect(table.refcount() == 1);
     Handler.throws = true;
     const result = object.propertiesFor(.serialize);
-    const pending = phpz.errors.hasException();
-    phpz.errors.clearException();
+    const pending = phpz.exception.hasPending();
+    phpz.exception.clear();
     try std.testing.expectError(error.PhpException, result);
     try expect(pending and table.refcount() == 1);
 

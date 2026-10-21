@@ -1,6 +1,6 @@
 const std = @import("std");
 const c = @import("../root.zig").c;
-const errors = @import("../errors.zig");
+const exception = @import("../exception.zig");
 const Zval = @import("../zval.zig").Zval;
 const String = @import("string.zig").String;
 
@@ -350,8 +350,8 @@ pub const Array = opaque {
     /// alive and do not invalidate their entries during comparison. Reference
     /// wrappers are passed through; dereferencing is the callback's policy.
     /// Returns the raw Zend comparison result, not necessarily -1, 0, or 1.
-    /// Pending PHP exceptions return PhpException; Zend bailouts propagate.
-    pub fn compare(self: *Array, other: *Array, compare_fn: fn (*const c.zval, *const c.zval) c_int, ordered: bool) errors.Exception!c_int {
+    /// Pending PHP exceptions return PhpException or UnwindExit; Zend bailouts propagate.
+    pub fn compare(self: *Array, other: *Array, compare_fn: fn (*const c.zval, *const c.zval) c_int, ordered: bool) exception.Error!c_int {
         const Cb = struct {
             fn cb(a: ?*const anyopaque, b: ?*const anyopaque) callconv(.c) c_int {
                 const left: *const c.zval = @ptrCast(@alignCast(a.?));
@@ -360,7 +360,7 @@ pub const Array = opaque {
             }
         };
         const result = c.zend_hash_compare(self.ptr(), other.ptr(), Cb.cb, ordered);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
         return result;
     }
 
@@ -376,27 +376,27 @@ pub const Array = opaque {
     /// Return `.keep` to retain the element, `.remove` to delete it from the array,
     /// or `.stop` to halt iteration. Use `.remove` for filtering.
     /// The callback must return `.stop` to stop after a PHP exception. Pending
-    /// exceptions are reported as PhpException after traversal returns.
-    pub fn apply(self: *Array, apply_fn: fn (*c.zval) ApplyResult) errors.Exception!void {
+    /// exceptions are reported as PhpException or UnwindExit after traversal returns.
+    pub fn apply(self: *Array, apply_fn: fn (*c.zval) ApplyResult) exception.Error!void {
         const Cb = struct {
             fn cb(zv: ?*c.zval) callconv(.c) c_int {
                 return @backingInt(apply_fn(zv.?));
             }
         };
         c.zend_hash_apply(self.ptr(), Cb.cb);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
     }
 
     /// Like apply(), in reverse order; values are borrowed and removals are not rolled back.
     /// Removal requires mutable, uniquely owned storage. Do not otherwise invalidate entries.
-    pub fn reverseApply(self: *Array, apply_fn: fn (*c.zval) ApplyResult) errors.Exception!void {
+    pub fn reverseApply(self: *Array, apply_fn: fn (*c.zval) ApplyResult) exception.Error!void {
         const Cb = struct {
             fn cb(zv: ?*c.zval) callconv(.c) c_int {
                 return @backingInt(apply_fn(zv.?));
             }
         };
         c.zend_hash_reverse_apply(self.ptr(), Cb.cb);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
     }
 
     /// Apply a callback to each element, passing a user-provided argument pointer.
@@ -406,14 +406,14 @@ pub const Array = opaque {
         comptime ArgType: type,
         apply_fn: fn (*c.zval, *ArgType) ApplyResult,
         arg: *ArgType,
-    ) errors.Exception!void {
+    ) exception.Error!void {
         const Cb = struct {
             fn cb(zv: ?*c.zval, a: ?*anyopaque) callconv(.c) c_int {
                 return @backingInt(apply_fn(zv.?, @ptrCast(@alignCast(a.?))));
             }
         };
         c.zend_hash_apply_with_argument(self.ptr(), Cb.cb, arg);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
     }
 
     pub const SortOrder = enum(c_int) { less = -1, equal = 0, greater = 1 };
@@ -421,16 +421,16 @@ pub const Array = opaque {
     /// Sort the array in-place with a custom compare function and optional renumbering.
     /// Callback results are passed through; returning `.equal` does not stop
     /// sorting. Zend may invoke further callbacks with a pending PHP exception.
-    /// Pending exceptions are reported as PhpException after sorting returns;
+    /// Pending exceptions are reported as PhpException or UnwindExit after sorting returns;
     /// changes are not rolled back.
-    pub fn sort(self: *Array, compare_fn: fn (*c.Bucket, *c.Bucket) SortOrder, renumber: bool) errors.Exception!void {
+    pub fn sort(self: *Array, compare_fn: fn (*c.Bucket, *c.Bucket) SortOrder, renumber: bool) exception.Error!void {
         const Cb = struct {
             fn cb(a: ?*c.Bucket, b: ?*c.Bucket) callconv(.c) c_int {
                 return @backingInt(compare_fn(a.?, b.?));
             }
         };
         c.zend_hash_sort(self.ptr(), Cb.cb, renumber);
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
     }
 
     /// Get refcount

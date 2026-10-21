@@ -3,7 +3,7 @@ const assert = std.debug.assert;
 
 const c = @import("../root.zig").c;
 const zend = @import("../zend.zig");
-const errors = @import("../errors.zig");
+const exception = @import("../exception.zig");
 const Zval = @import("../zval.zig").Zval;
 
 pub const Object = opaque {
@@ -99,8 +99,9 @@ pub const Object = opaque {
     /// PHP exception is pending. Bailout may bypass this cleanup. Addref first
     /// if that reference is borrowed.
     /// `.reference` is not accepted; pass `reference.val()` with `.mixed` instead.
-    /// Returns `error.PhpException` if the property write raises a PHP exception.
-    pub fn set(self: *Object, comptime zk: Zval.Kind, key: []const u8, val: Zval.Type(zk)) errors.Exception!void {
+    /// Returns `error.PhpException` or `error.UnwindExit` if the property write raises a PHP
+    /// exception.
+    pub fn set(self: *Object, comptime zk: Zval.Kind, key: []const u8, val: Zval.Type(zk)) exception.Error!void {
         switch (zk) {
             .null => c.add_property_null_ex(self.ptr(), key.ptr, key.len),
             .int => c.add_property_long_ex(self.ptr(), key.ptr, key.len, @intCast(val)),
@@ -118,7 +119,7 @@ pub const Object = opaque {
             },
             inline .undef, .indirect, .ptr => @compileError("'" ++ @tagName(zk) ++ "' cannot be set as object property"),
         }
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
     }
 };
 

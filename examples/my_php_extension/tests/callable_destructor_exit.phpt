@@ -19,6 +19,6 @@ echo "unexpected PHP continuation\n";
 ?>
 --EXPECT--
 PHP destructor
-Zig error: PhpException
+Zig error: UnwindExit
 Zig cleanup
 PHP shutdown

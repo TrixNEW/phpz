@@ -1,5 +1,5 @@
 const c = @import("../c.zig").c;
-const errors = @import("../errors.zig");
+const exception = @import("../exception.zig");
 const globals = @import("../globals.zig");
 const Zval = @import("../zval.zig").Zval;
 const ClassEntry = @import("class_entry.zig").ClassEntry;
@@ -38,11 +38,11 @@ pub const Constant = opaque {
     /// Resolve a constant through zend_get_constant_ex(). Supports qualified global
     /// names and Class::NAME; scope controls class-constant access and self/parent.
     /// Silent lookup returns null for missing/inaccessible constants.
-    /// Evaluation or autoload exceptions are still reported as PhpException.
+    /// Evaluation or autoload exceptions are still reported as PhpException or UnwindExit.
     ///
     /// Ownership: borrowed value owned by Zend. Do not modify or release it; copy it
     /// before retaining it beyond its owner. Zend bailouts propagate unchanged.
-    pub fn get(constant_name: []const u8, scope: ?*ClassEntry, silent: bool) errors.Exception!?*Zval {
+    pub fn get(constant_name: []const u8, scope: ?*ClassEntry, silent: bool) exception.Error!?*Zval {
         const key = String.init(constant_name, false);
         defer key.release();
         const value = c.zend_get_constant_ex(
@@ -50,7 +50,7 @@ pub const Constant = opaque {
             if (scope) |ce| ce.ptr() else null,
             if (silent) c.ZEND_FETCH_CLASS_EXCEPTION | c.ZEND_FETCH_CLASS_SILENT else c.ZEND_FETCH_CLASS_EXCEPTION,
         );
-        if (errors.hasException()) return error.PhpException;
+        try exception.check();
         return if (value) |v| .from(v) else null;
     }
 };

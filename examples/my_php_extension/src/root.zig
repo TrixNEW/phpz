@@ -24,6 +24,8 @@ const object_access = @import("testing/object_access.zig");
 const string_tests = @import("testing/strings.zig");
 const array_tests = @import("testing/arrays.zig");
 const iteration = @import("testing/iteration.zig");
+const error_tests = @import("testing/errors.zig");
+const exception_boundaries = @import("testing/exception_boundaries.zig");
 const boundaries = @import("testing/boundaries.zig");
 const class_entry = @import("testing/class_entry.zig");
 const property_tests = @import("testing/properties.zig");
@@ -38,6 +40,8 @@ fn info(m: *phpz.ModuleEntry) void {
 
 comptime {
     phpz.namedFunctions(.{
+        .@"MyPHPExt\\Test\\readLastError" = error_tests.readLastError,
+        .@"MyPHPExt\\Test\\checkExceptionBoundary" = exception_boundaries.checkExceptionBoundary,
         .@"MyPHPExt\\Test\\checkNativeTsrmThreads" = thread_tests.checkNativeTsrmThreads,
         .@"MyPHPExt\\Test\\checkStreams" = stream_tests.checkStreams,
         .@"MyPHPExt\\Test\\openStream" = stream_tests.openStream,

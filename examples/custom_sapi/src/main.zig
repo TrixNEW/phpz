@@ -84,7 +84,7 @@ pub fn main(init: std.process.Init) !void {
     // Failure may leave a partially active request. Unwind the host and terminate;
     // do not retry startup or continue serving requests with this PHP runtime.
     try sapi.request.startup();
-    var exit_status: phpz.errors.ExitStatus = .ok;
+    var exit_status: phpz.exception.ExitStatus = .ok;
     const executed = blk: {
         // Keep context and source alive through shutdown functions and flush.
         defer {
@@ -95,11 +95,12 @@ pub fn main(init: std.process.Init) !void {
         switch (source) {
             .code => |text| {
                 if (text.len != 0) phpz.tryEval(text, null, "Command line code") catch |err| {
-                    if (err == error.PhpException) {
-                        if (phpz.errors.takeUnwindExit()) |status| break :blk status == .ok;
+                    if (err == error.UnwindExit) {
+                        if (phpz.exception.takeUnwindExit()) |status| break :blk status == .ok;
+                    } else if (err == error.PhpException) {
                         // Reporting can run PHP __toString(), so it needs its own boundary.
-                        if (phpz.errors.exception()) |exception| {
-                            zend.bailout.run(phpz.errors.reportException, .{ exception, .err }) catch {};
+                        if (phpz.exception.get()) |exception| {
+                            zend.bailout.run(phpz.exception.report, .{ exception, .err }) catch {};
                         }
                     }
                     break :blk false;

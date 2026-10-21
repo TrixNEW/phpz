@@ -6,14 +6,14 @@ const expect = std.testing.expect;
 // Check the Zig error as well as EG(exception); PHP alone would also throw if
 // a broken wrapper returned success while leaving the exception pending.
 fn expectPhpException(result: anytype) !void {
-    const pending = phpz.errors.hasException();
-    phpz.errors.clearException();
+    const pending = phpz.exception.hasPending();
+    phpz.exception.clear();
     try std.testing.expectError(error.PhpException, result);
     try expect(pending);
 }
 
 fn removeWithException(_: *c.zval) phpz.zend.Array.ApplyResult {
-    if (!phpz.errors.hasException()) c.zend_throw_error(null, "apply failed");
+    if (!phpz.exception.hasPending()) c.zend_throw_error(null, "apply failed");
     return .remove;
 }
 
@@ -25,7 +25,7 @@ fn stopWithException(_: *c.zval, calls: *usize) phpz.zend.Array.ApplyResult {
 }
 
 fn sortWithException(a: *c.Bucket, b: *c.Bucket) phpz.zend.Array.SortOrder {
-    if (!phpz.errors.hasException()) c.zend_throw_error(null, "sort failed");
+    if (!phpz.exception.hasPending()) c.zend_throw_error(null, "sort failed");
     const left = phpz.Zval.raw.asUnchecked(&a.val, .int);
     const right = phpz.Zval.raw.asUnchecked(&b.val, .int);
     return if (left < right) .less else if (left > right) .greater else .equal;

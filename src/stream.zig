@@ -1,6 +1,6 @@
 const std = @import("std");
 const c = @import("c.zig").c;
-const errors = @import("errors.zig");
+const exception = @import("exception.zig");
 const Resource = @import("zend/resource.zig").Resource;
 const String = @import("zend/string.zig").String;
 const Zval = @import("zval.zig").Zval;
@@ -69,9 +69,9 @@ pub const Stream = opaque {
     }
 
     /// Borrow a stream; keep its resource alive and open. Invalid resources raise PHP TypeError.
-    pub fn fromResource(resource: *Resource) errors.TypeError!*Stream {
+    pub fn fromResource(resource: *Resource) exception.Error!*Stream {
         const raw = c.zend_fetch_resource2(resource.ptr(), "stream", resourceTypeId(), persistentResourceTypeId()) orelse
-            return error.PhpTypeError;
+            return exception.pending() orelse error.PhpException;
         return @ptrCast(@alignCast(raw));
     }
 

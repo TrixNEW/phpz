@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const errors = @import("../errors.zig");
+const exception = @import("../exception.zig");
 const stub = @import("../stub.zig");
 const c = @import("../root.zig").c;
 const Zval = @import("../zval.zig").Zval;
@@ -72,7 +72,7 @@ pub const Callable = struct {
         return c.zend_is_callable(zv, 0, null);
     }
 
-    pub const CallError = error{ CallFailed, PhpException };
+    pub const CallError = error{CallFailed} || exception.Error;
     pub const TryCallError = CallError || bailout.Error;
 
     /// Invoke the callable with positional and optional named arguments.
@@ -84,7 +84,8 @@ pub const Callable = struct {
     /// must precede string keys in iteration order. Matching and references follow Zend.
     ///
     /// Returns `error.CallFailed` if the executor is inactive.
-    /// Returns `error.PhpException` if a PHP exception is pending after the call.
+    /// Returns `error.PhpException` or `error.UnwindExit` if a PHP exception is pending after the
+    /// call.
     pub fn call(self: *Callable, retval: ?*c.zval, args: anytype, named_params: ?*Array) CallError!void {
         const info = @typeInfo(@TypeOf(args));
         if (!(info == .@"struct" and info.@"struct".is_tuple))
@@ -103,8 +104,8 @@ pub const Callable = struct {
         fci.named_params = if (named_params) |values| values.ptr() else null;
         const result = c.zend_call_function(&fci, &self.fcc);
         if (retval == null) Zval.raw.release(&discard);
+        try exception.check();
         if (result == c.FAILURE) return error.CallFailed;
-        if (errors.hasException()) return error.PhpException;
     }
 
     /// Invoke the callable and convert a Zend bailout into `error.ZendBailout`.

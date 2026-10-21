@@ -2,7 +2,7 @@ const std = @import("std");
 
 const c = @import("root.zig").c;
 const zend = @import("zend.zig");
-const errors = @import("errors.zig");
+const exception = @import("exception.zig");
 
 /// Zval is a wrapper around PHP's zval (Zend Value) structure, providing
 /// type-safe access to PHP values from Zig code.
@@ -232,7 +232,7 @@ pub const Zval = opaque {
         return raw.as(self.ptr(), zk);
     }
 
-    pub const CastError = errors.Exception;
+    pub const CastError = exception.Error;
     pub const ConvertError = CastError;
 
     /// Result type for a non-mutating PHP cast.
@@ -248,7 +248,7 @@ pub const Zval = opaque {
     /// returned strings/arrays/objects and must release() or transfer ownership.
     /// Payloads may be shared, as with PHP casts; this is not a deep copy.
     /// Requires an initialized PHP value (or a reference to one), not an internal value.
-    /// Returns PhpException if a PHP exception is pending after conversion.
+    /// Returns PhpException or UnwindExit if a PHP exception is pending after conversion.
     pub fn cast(self: *Zval, comptime zk: Kind) CastError!CastType(zk) {
         return raw.cast(self.ptr(), zk);
     }
@@ -259,7 +259,7 @@ pub const Zval = opaque {
     /// References are unwrapped; other owners of the reference keep their value.
     /// Returned slices/pointers are borrowed from this zval until it changes or is released.
     /// Requires an initialized PHP value (or a reference to one), not an internal value.
-    /// Returns PhpException if a PHP exception is pending after conversion.
+    /// Returns PhpException or UnwindExit if a PHP exception is pending after conversion.
     /// On failure, the zval may already have changed.
     pub fn convert(self: *Zval, comptime zk: Kind) ConvertError!Type(zk) {
         return raw.convert(self.ptr(), zk);
@@ -531,9 +531,9 @@ pub const Zval = opaque {
                 },
                 else => unreachable,
             };
-            if (errors.hasException()) {
+            if (exception.pending()) |err| {
                 if (zk == .str) result.release();
-                return error.PhpException;
+                return exception.pending() orelse err;
             }
             return result;
         }
@@ -550,7 +550,7 @@ pub const Zval = opaque {
                 else => @compileError("PHP casts do not support target ." ++ @tagName(zk)),
             };
             converter(zv);
-            if (errors.hasException()) return error.PhpException;
+            try exception.check();
             return raw.asUnchecked(zv, zk);
         }
 

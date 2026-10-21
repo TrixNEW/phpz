@@ -5,7 +5,7 @@ const c = @import("root.zig").c;
 const Ctx = @import("ctx.zig").Ctx;
 const GuardCtx = @import("ctx.zig").GuardCtx;
 const CallFrame = @import("ctx.zig").CallFrame;
-const errors = @import("errors.zig");
+const exception = @import("exception.zig");
 const guard = @import("guard.zig");
 const stub = @import("stub.zig");
 const zend = @import("zend.zig");
@@ -439,8 +439,8 @@ pub fn createHandler(comptime func_desc: [:0]const u8, comptime func: anytype) H
                 } else call(.{ .call = .from(execute_data.?), .retval = .from(return_value.?) }),
             ) catch |err| {
                 zend.bailout.propagate(err);
-                if (!errors.hasException()) {
-                    errors.throwError(null, "%s at " ++ func_desc, .{@errorName(err).ptr}) catch {};
+                if (!exception.hasPending()) {
+                    exception.throwError(null, "%s at " ++ func_desc, .{@errorName(err).ptr}) catch {};
                 }
             };
         }

@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: cccb9cb12f6e4e0efc365882a210fd737001cfb8 */
+ * Stub hash: 9fa1c3c978cb9ba7804c55573168f3b5bd3d5b0e */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -134,6 +134,15 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkObjectViews, 
 ZEND_END_ARG_INFO()
 
 #define arginfo_MyPHPExt_Test_checkArrayCallbacks arginfo_hello
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_readLastError, 0, 1, IS_ARRAY, 1)
+	ZEND_ARG_TYPE_INFO(0, clear_exception, _IS_BOOL, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkExceptionBoundary, 0, 2, IS_VOID, 0)
+	ZEND_ARG_TYPE_INFO(0, api, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkArrayHashTable, 0, 1, IS_VOID, 0)
 	ZEND_ARG_TYPE_INFO(0, references, IS_ARRAY, 0)
@@ -530,6 +539,8 @@ ZEND_FUNCTION(MyPHPExt_Test_writeObjectNative);
 ZEND_FUNCTION(MyPHPExt_Test_objectDimension);
 ZEND_FUNCTION(MyPHPExt_Test_checkObjectViews);
 ZEND_FUNCTION(MyPHPExt_Test_checkArrayCallbacks);
+ZEND_FUNCTION(MyPHPExt_Test_readLastError);
+ZEND_FUNCTION(MyPHPExt_Test_checkExceptionBoundary);
 ZEND_FUNCTION(MyPHPExt_Test_checkArrayHashTable);
 ZEND_FUNCTION(MyPHPExt_Test_isArrayList);
 ZEND_FUNCTION(MyPHPExt_Test_arrayToList);
@@ -778,6 +789,16 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArrayCallbacks"), zif_MyPHPExt_Test_checkArrayCallbacks, arginfo_MyPHPExt_Test_checkArrayCallbacks, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArrayCallbacks"), zif_MyPHPExt_Test_checkArrayCallbacks, arginfo_MyPHPExt_Test_checkArrayCallbacks, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "readLastError"), zif_MyPHPExt_Test_readLastError, arginfo_MyPHPExt_Test_readLastError, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "readLastError"), zif_MyPHPExt_Test_readLastError, arginfo_MyPHPExt_Test_readLastError, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkExceptionBoundary"), zif_MyPHPExt_Test_checkExceptionBoundary, arginfo_MyPHPExt_Test_checkExceptionBoundary, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkExceptionBoundary"), zif_MyPHPExt_Test_checkExceptionBoundary, arginfo_MyPHPExt_Test_checkExceptionBoundary, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArrayHashTable"), zif_MyPHPExt_Test_checkArrayHashTable, arginfo_MyPHPExt_Test_checkArrayHashTable, 0, NULL, NULL)

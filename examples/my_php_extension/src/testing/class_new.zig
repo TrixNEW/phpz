@@ -11,7 +11,7 @@ const Value = struct {
             // Trace the already initialized backing when construction fails.
             const instance = try ValueClass.fromObject(ctx.call.this().?);
             instance.backing().?.trace_cleanup = true;
-            return phpz.errors.throwError(null, "constructor failed", .{});
+            return phpz.exception.throwError(null, "constructor failed", .{});
         }
         return .{ .first = first, .second = second orelse 7 };
     }
@@ -63,7 +63,7 @@ pub const classes = .{ ValueClass, BareClass, FallibleClass };
 
 /// Make the next FallibleValue initialization or clone fail.
 pub fn failNextFallible(stage: []const u8) !void {
-    fail_stage = std.meta.stringToEnum(FallibleStage, stage) orelse return phpz.errors.argumentValueError(1, "must be none, init or clone", .{});
+    fail_stage = std.meta.stringToEnum(FallibleStage, stage) orelse return phpz.exception.argumentValueError(1, "must be none, init or clone", .{});
 }
 
 /// Exercise Class.new()/tryNew() with borrowed positional and named arguments.

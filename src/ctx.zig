@@ -3,7 +3,7 @@ const std = @import("std");
 
 const c = @import("root.zig").c;
 const stub = @import("stub.zig");
-const errors = @import("errors.zig");
+const exception = @import("exception.zig");
 const resource_guard = @import("guard.zig");
 const GuardScope = resource_guard.Scope;
 const Guard = resource_guard.Guard;
@@ -137,33 +137,33 @@ pub const CallFrame = opaque {
 
     /// Reject extra named variadic arguments in the currently executing call.
     /// Names matched to declared parameters are unaffected.
-    pub fn expectNoExtraNamedArgs(self: *CallFrame) errors.ArgumentCountError!void {
+    pub fn expectNoExtraNamedArgs(self: *CallFrame) exception.Error!void {
         if (c.ZEND_CALL_INFO(self.ptr()) & c.ZEND_CALL_HAS_EXTRA_NAMED_PARAMS != 0) {
-            return errors.unexpectedExtraNamedArgs();
+            return exception.unexpectedExtraNamedArgs();
         }
     }
 
     /// Validate the number of argument slots against expected min/max.
     /// Does not check extra named variadic arguments.
     /// Call once at the top of each function, before accessing individual args.
-    pub fn expectArgCount(self: *CallFrame, min: u32, max: u32) errors.WrongParameterCountError!void {
+    pub fn expectArgCount(self: *CallFrame, min: u32, max: u32) exception.Error!void {
         const count = self.argCount();
         if (count < min or count > max) {
-            return errors.wrongParameterCount(min, max);
+            return exception.wrongParameterCount(min, max);
         }
     }
 
     /// Expect zero arguments in the currently executing call, including named extras.
-    pub fn expectNoArgs(self: *CallFrame) (errors.WrongParameterCountError || errors.ArgumentCountError)!void {
+    pub fn expectNoArgs(self: *CallFrame) exception.Error!void {
         try self.expectNoExtraNamedArgs();
         if (self.argCount() != 0) {
-            return errors.wrongParametersNone();
+            return exception.wrongParametersNone();
         }
     }
 
     /// Error set for `expectArgs`: extra named arguments, argument count mismatch,
     /// missing required argument, invalid value, or type mismatch.
-    pub const ExpectArgsError = ExpectArgError || errors.WrongParameterCountError || errors.ArgumentCountError;
+    pub const ExpectArgsError = exception.Error;
 
     fn ExpectArgResults(comptime specs: []const ExpectArgKind.Spec) type {
         comptime {
@@ -297,7 +297,7 @@ pub const CallFrame = opaque {
         return result;
     }
 
-    pub const ExpectArgError = errors.ArgumentTypeError || errors.ArgumentValueError;
+    pub const ExpectArgError = exception.Error;
 
     /// Argument parsing type tags, matching ZPP semantics.
     ///
@@ -579,7 +579,7 @@ pub const CallFrame = opaque {
             if (comptime spec.isOptional())
                 return null
             else {
-                return errors.argumentValueError(arg_num, "must be provided", .{});
+                return exception.argumentValueError(arg_num, "must be provided", .{});
             }
         }
         return self.extractArg(arg_num, spec, runtime);
@@ -620,12 +620,12 @@ pub const CallFrame = opaque {
                     runtime.out.parse(zv, &err) catch {
                         if (err) |e| {
                             defer if (comptime c.ZEND_DEBUG == 1) c._efree(@as(*anyopaque, @ptrCast(e)), @src().file.ptr, @intCast(@src().line), null, 0) else c.efree(@as(*anyopaque, @ptrCast(e)));
-                            return errors.argumentTypeError(arg_num, "must be a valid callback" ++ or_null ++ ", %s", .{e});
+                            return exception.argumentTypeError(arg_num, "must be a valid callback" ++ or_null ++ ", %s", .{e});
                         }
-                        return errors.argumentTypeError(arg_num, "must be a valid callback" ++ or_null, .{});
+                        return exception.argumentTypeError(arg_num, "must be a valid callback" ++ or_null, .{});
                     };
                 } else if (!zend.Callable.isCallable(zv)) {
-                    return errors.argumentTypeError(arg_num, "must be a valid callback" ++ or_null, .{});
+                    return exception.argumentTypeError(arg_num, "must be a valid callback" ++ or_null, .{});
                 }
                 return if (comptime s.nullable) .{ .value = Zval.from(zv) } else Zval.from(zv);
             },
@@ -675,28 +675,28 @@ pub const CallFrame = opaque {
     // Error and coercion paths stay out of line so a handler's fast path is a
     // single type compare per argument, as with Zend's Z_PARAM_* macros.
 
-    noinline fn typeError(arg_num: u32, expected: c.zend_expected_type, zv: *c.zval) errors.ArgumentTypeError {
+    noinline fn typeError(arg_num: u32, expected: c.zend_expected_type, zv: *c.zval) exception.Error {
         @branchHint(.cold);
         c.zend_wrong_parameter_type_error(arg_num, expected, zv);
-        return error.PhpArgumentTypeError;
+        return exception.pending() orelse error.PhpException;
     }
 
-    noinline fn classError(arg_num: u32, class: *zend.ClassEntry, nullable: bool, zv: *c.zval) errors.ArgumentTypeError {
+    noinline fn classError(arg_num: u32, class: *zend.ClassEntry, nullable: bool, zv: *c.zval) exception.Error {
         @branchHint(.cold);
         if (nullable)
             c.zend_wrong_parameter_class_or_null_error(arg_num, class.name().ptr, zv)
         else
             c.zend_wrong_parameter_class_error(arg_num, class.name().ptr, zv);
-        return error.PhpArgumentTypeError;
+        return exception.pending() orelse error.PhpException;
     }
 
-    noinline fn kindError(arg_num: u32, comptime expected: []const u8, zv: *c.zval) errors.ArgumentTypeError {
+    noinline fn kindError(arg_num: u32, comptime expected: []const u8, zv: *c.zval) exception.Error {
         @branchHint(.cold);
-        return errors.argumentTypeError(arg_num, "must be of type " ++ expected ++ ", %s given", .{Zval.raw.kind(zv).cstr()});
+        return exception.argumentTypeError(arg_num, "must be of type " ++ expected ++ ", %s given", .{Zval.raw.kind(zv).cstr()});
     }
 
     /// Apply ZPP's slow path to a by-value argument slot owned by the call frame.
-    noinline fn coerce(comptime kind: ExpectArgKind, arg_num: u32, zv: *c.zval, expected: c.zend_expected_type) errors.ArgumentTypeError!void {
+    noinline fn coerce(comptime kind: ExpectArgKind, arg_num: u32, zv: *c.zval, expected: c.zend_expected_type) exception.Error!void {
         @branchHint(.cold);
         switch (kind) {
             .int => {
@@ -730,12 +730,12 @@ pub const CallFrame = opaque {
         const T = ExpectArgValueType(spec);
         return switch (comptime spec) {
             .int => std.math.cast(T, Zval.raw.asUnchecked(zv, .int)) orelse
-                errors.argumentValueError(arg_num, "must be between " ++ comptime std.fmt.comptimePrint("{d} and {d} ({s})", .{ std.math.minInt(T), std.math.maxInt(T), @typeName(T) }), .{}),
+                exception.argumentValueError(arg_num, "must be between " ++ comptime std.fmt.comptimePrint("{d} and {d} ({s})", .{ std.math.minInt(T), std.math.maxInt(T), @typeName(T) }), .{}),
             .float => blk: {
                 const value = Zval.raw.asUnchecked(zv, .float);
                 if (comptime T == f32) {
                     if (std.math.isFinite(value) and @abs(value) > std.math.floatMax(f32)) {
-                        return errors.argumentValueError(arg_num, "must be within the finite f32 range or be INF, -INF or NAN", .{});
+                        return exception.argumentValueError(arg_num, "must be within the finite f32 range or be INF, -INF or NAN", .{});
                     }
                 }
                 break :blk @as(T, @floatCast(value));
@@ -748,7 +748,7 @@ pub const CallFrame = opaque {
             },
             .resource => |s| switch (s.as) {
                 .value => Zval.raw.asUnchecked(zv, .resource),
-                .stream => Stream.fromResource(Zval.raw.asUnchecked(zv, .resource)) catch return error.PhpArgumentTypeError,
+                .stream => try Stream.fromResource(Zval.raw.asUnchecked(zv, .resource)),
                 .zval => Zval.from(zv),
             },
             inline else => Zval.raw.asUnchecked(zv, comptime @as(ExpectArgKind, spec).toZvalKind()),
