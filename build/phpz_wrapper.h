@@ -12,6 +12,9 @@ static zend_always_inline php_stream *phpz_stream_opendir(const char *path, int 
 bool phpz_stream_is_persistent(php_stream *stream);
 void phpz_stream_to_zval(php_stream *stream, zval *value);
 
+/* Keep PHP's HASH_NOMEM sentinel casts in C; translate-c cannot lower them. */
+void *phpz_hash_index_update_ptr(HashTable *ht, zend_ulong h, void *data);
+
 static zend_always_inline zend_result phpz_stream_copy_to_stream(php_stream *src, php_stream *dest, size_t maxlen, size_t *len) {
     return php_stream_copy_to_stream_ex(src, dest, maxlen, len);
 }

@@ -1,5 +1,9 @@
 #include "phpz.h"
 
+void *phpz_hash_index_update_ptr(HashTable *ht, zend_ulong h, void *data) {
+    return zend_hash_index_update_ptr(ht, h, data);
+}
+
 bool phpz_stream_is_persistent(php_stream *stream) {
     return php_stream_is_persistent(stream);
 }

@@ -171,7 +171,7 @@ pub const Array = opaque {
 
     /// Like updatePtr(), keyed by index.
     pub fn updateIndexPtr(self: *Array, comptime T: type, index: isize, value: *T) *T {
-        return @ptrCast(@alignCast(c.zend_hash_index_update_ptr(self.ptr(), @bitCast(index), value).?));
+        return @ptrCast(@alignCast(c.phpz_hash_index_update_ptr(self.ptr(), @bitCast(index), value).?));
     }
 
     /// Like addPtr(), keyed by index.
