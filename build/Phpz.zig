@@ -47,8 +47,12 @@ pub const Options = struct {
 
     /// Use static TSRM caches for ZTS builds; ignored by NTS PHP.
     /// Shared builds own a cache, while built-in builds use PHP's cache.
-    /// Disable to access TSRM through its runtime lookup functions instead.
+    /// Disable to use runtime lookup instead of the static cache.
     static_tsrmls_cache: bool = true,
+
+    /// Read PHP's TSRM cache through the TCB on Linux x86_64/aarch64 ZTS builds.
+    /// Falls back according to static_tsrmls_cache when unavailable.
+    tsrmls_cache_tcb_fast_path: bool = false,
 
     /// Maximum stack frames included in PHP memory leak reports.
     /// Applies when using php_allocator with a debug PHP build.
@@ -122,6 +126,7 @@ pub fn initInner(b: *Build, options: Options) Phpz {
     const mod_opts = b.addOptions();
     mod_opts.addOption(bool, "shared", options.shared);
     mod_opts.addOption(bool, "static_tsrmls_cache", options.static_tsrmls_cache);
+    mod_opts.addOption(bool, "tsrmls_cache_tcb_fast_path", options.tsrmls_cache_tcb_fast_path);
     mod_opts.addOption(usize, "debug_leak_trace_frames", options.debug_leak_trace_frames);
     mod.addOptions("phpz_options", mod_opts);
     return .{ .mod = mod, .c = c, .options = options };

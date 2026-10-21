@@ -102,7 +102,6 @@ comptime {
         .@"MyPHPExt\\Test\\checkArrayHashTable" = array_tests.checkArrayHashTable,
         .@"MyPHPExt\\Test\\isArrayList" = array_tests.isArrayList,
         .@"MyPHPExt\\Test\\arrayToList" = array_tests.arrayToList,
-        .@"MyPHPExt\\Test\\checkTsrmCache" = @import("testing/threads.zig").checkTsrmCache,
         .@"MyPHPExt\\Test\\iterateArray" = iteration.iterateArray,
         .@"MyPHPExt\\Test\\lookupKey" = iteration.lookupKey,
         .@"MyPHPExt\\Test\\storeKey" = iteration.storeKey,

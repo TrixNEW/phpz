@@ -129,6 +129,13 @@ Check out the [`examples/`](./examples/) directory for complete working examples
 
 ## Threads
 
+Set `.tsrmls_cache_tcb_fast_path = true` in the options passed to `Phpz.init` to enable
+direct TCB access to PHP's TSRM cache on Linux x86_64/aarch64 ZTS builds. It defaults
+to `false`, which disables both TCB offset detection and direct thread-pointer reads.
+When disabled or unavailable, access uses the static cache by default, or runtime
+lookup with `.static_tsrmls_cache = false`. The two options are independent of LTO;
+NTS builds ignore both TSRM options.
+
 Zend APIs, zvals, `php_allocator` and request memory belong to the PHP thread that is running the request.
 Native worker threads must not touch them, under NTS or ZTS.
 

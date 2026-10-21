@@ -20,6 +20,8 @@ pub const Function = opaque {
         internal = c.ZEND_INTERNAL_FUNCTION,
         /// PHP userland function (written in PHP)
         user = c.ZEND_USER_FUNCTION,
+        /// PHP code compiled for eval.
+        eval = c.ZEND_EVAL_CODE,
         _,
     };
 

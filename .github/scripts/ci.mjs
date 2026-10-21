@@ -268,6 +268,17 @@ async function shared(config) {
       tasks.push({ name: `${example}-${mode}`, run: taskLog => run('zig', ['build', 'run-tests', ...args, `-Doptimize=${mode}`], path.join(config.repo, 'examples', example), taskLog) });
     }
   }
+  // Exercise all TSRM paths with and without LTO on both Linux runners.
+  if (process.platform === 'linux' && config.ts === 'ts') {
+    const mode = config.debug === 'true' ? 'ReleaseSafe' : 'ReleaseFast';
+    for (const staticCache of [false, true]) {
+      for (const tcb of [false, true]) {
+        for (const lto of [false, true]) {
+          tasks.push({ name: `my_php_extension-static-${staticCache}-tcb-${tcb}-lto-${lto}`, run: taskLog => run('zig', ['build', 'run-tests', ...args, `-Doptimize=${mode}`, `-Dstatic-tsrmls-cache=${staticCache}`, `-Dtsrmls-cache-tcb-fast-path=${tcb}`, `-Dlto=${lto}`], path.join(config.repo, 'examples/my_php_extension'), taskLog) });
+        }
+      }
+    }
+  }
   if (!win) tasks.push({ name: 'phpize', run: async taskLog => {
     // Preserve the example's ../../ phpz dependency without reusing Zig outputs.
     const fresh = path.join(config.work, 'phpize-repo');
@@ -308,7 +319,7 @@ async function builtin(config) {
   } }])) return false;
   Object.assign(env, { PHP_BUILD_VERSION: config.php, PHP_BUILD_TS: config.ts, PHP_BUILD_DEBUG: config.debug === 'true' ? '1' : '0', PHP_BUILD_EXTENSION: config.extension, PHP_BUILD_SOURCE: source });
   const run = (exe, args, log) => command(exe, args, { cwd: source, env, log });
-  return runTasks(config, [{ name: 'builtin', run: async log => {
+  if (!await runTasks(config, [{ name: 'builtin', run: async log => {
     if (process.platform === 'win32') {
       await run('pwsh', ['-NoProfile', '-File', path.join(config.root, '.github/scripts/run-builtin-windows.ps1')], log);
     } else {
@@ -324,7 +335,23 @@ async function builtin(config) {
       await run(php, ['-n', '--ri', config.extension], log);
       await run(php, ['-n', 'run-tests.php', '-n', '-q', `ext/${config.extension}/tests`], log);
     }
-  } }]);
+  } }])) return false;
+  if (process.platform === 'linux' && config.ts === 'ts' && config.extension === 'my_php_extension') {
+    const tasks = [];
+    for (const staticCache of [false, true]) {
+      for (const tcb of [false, true]) {
+        // The default builtin task already tested static=true, tcb=false.
+        if (staticCache && !tcb) continue;
+        tasks.push({ name: `builtin-static-${staticCache}-tcb-${tcb}`, run: async log => {
+          // Rebuild the static extension and relink PHP; reuse the compiled PHP objects.
+          await run('make', [`-j${os.availableParallelism()}`, `MY_PHP_EXTENSION_ZIG_FLAGS=-Doptimize=ReleaseSafe -Dstatic-tsrmls-cache=${staticCache} -Dtsrmls-cache-tcb-fast-path=${tcb}`], log);
+          await run(env.TEST_PHP_EXECUTABLE, ['-n', 'run-tests.php', '-n', '-q', `ext/${config.extension}/tests`], log);
+        } });
+      }
+    }
+    return runTasks(config, tasks);
+  }
+  return true;
 }
 
 async function main() {
