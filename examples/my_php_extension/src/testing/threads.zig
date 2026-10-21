@@ -1,6 +1,9 @@
 const std = @import("std");
+
+const extension_info = @import("extension_info");
 const phpz = @import("phpz");
 const c = phpz.c;
+
 const Globals = @import("../metrics.zig").Globals;
 
 const thread_count = 2;
@@ -38,8 +41,8 @@ const Shared = struct {
 
 fn cacheMatches() bool {
     const storage = c.tsrm_get_ls_cache() orelse return false;
-    if (comptime @hasDecl(c, "phpz_tsrm_ls_cache")) {
-        if (c.phpz_tsrm_ls_cache() != storage) return false;
+    if (comptime @hasDecl(c, "phpz_static_tsrmls_cache_get")) {
+        if (c.phpz_static_tsrmls_cache_get() != storage) return false;
     }
     const base = @intFromPtr(storage);
     return @intFromPtr(c.phpz_executor_globals()) == base + c.executor_globals_offset and
@@ -80,8 +83,10 @@ fn worker(shared: *Shared, index: usize) void {
 
         phpz.tsrm.freeThread();
         if (c.tsrm_get_ls_cache() != null) result.failed = true;
-        if (comptime @hasDecl(c, "phpz_tsrm_ls_cache")) {
-            if (c.phpz_tsrm_ls_cache() != null) result.failed = true;
+        // Only shared extensions own this cache. PHP leaves the built-in
+        // core cache stale until the next thread resource initialization.
+        if (comptime extension_info.shared and @hasDecl(c, "phpz_static_tsrmls_cache_get")) {
+            if (c.phpz_static_tsrmls_cache_get() != null) result.failed = true;
         }
         shared.barrier.wait();
     }

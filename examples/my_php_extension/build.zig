@@ -48,6 +48,7 @@ pub fn build(b: *std.Build) void {
     const extension_info = b.addOptions();
     extension_info.addOption([:0]const u8, "name", extension_name);
     extension_info.addOption([:0]const u8, "version", extension_version);
+    extension_info.addOption(bool, "shared", shared);
     extension.root_module.addOptions("extension_info", extension_info);
 
     if (shared) {

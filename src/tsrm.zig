@@ -8,7 +8,7 @@ const owns_cache = zts and phpz_options.shared and phpz_options.static_tsrmls_ca
 
 /// Refresh the shared extension's TSRM cache; no-op when disabled, NTS, or built-in.
 pub fn updateCache() void {
-    if (comptime owns_cache) c.phpz_tsrm_ls_cache_update();
+    if (comptime owns_cache) c.phpz_static_tsrmls_cache_update();
 }
 
 pub fn startup() error{TsrmStartupFailed}!void {
@@ -20,7 +20,7 @@ pub fn startup() error{TsrmStartupFailed}!void {
 
 pub fn shutdown() void {
     if (comptime zts) c.tsrm_shutdown();
-    if (comptime owns_cache) c.phpz_tsrm_ls_cache_clear();
+    if (comptime owns_cache) c.phpz_static_tsrmls_cache_clear();
 }
 
 pub fn initThread() void {
@@ -30,7 +30,7 @@ pub fn initThread() void {
 
 pub fn freeThread() void {
     if (comptime zts) c.ts_free_thread();
-    if (comptime owns_cache) c.phpz_tsrm_ls_cache_clear();
+    if (comptime owns_cache) c.phpz_static_tsrmls_cache_clear();
 }
 
 pub fn envLock() void {

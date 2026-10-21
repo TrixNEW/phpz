@@ -13,15 +13,15 @@ void phpz_stream_to_zval(php_stream *stream, zval *value) {
 ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 
-void *phpz_tsrm_ls_cache(void) {
+void *phpz_static_tsrmls_cache_get(void) {
     return ZEND_TSRMLS_CACHE;
 }
 
-void phpz_tsrm_ls_cache_update(void) {
+void phpz_static_tsrmls_cache_update(void) {
     ZEND_TSRMLS_CACHE_UPDATE();
 }
 
-void phpz_tsrm_ls_cache_clear(void) {
+void phpz_static_tsrmls_cache_clear(void) {
     ZEND_TSRMLS_CACHE = NULL;
 }
 #endif
