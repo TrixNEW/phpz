@@ -71,7 +71,7 @@ foreach ([true, false] as $single) {
         fails(ValueError::class, fn() => parse('f32', $single, $bad));
     }
 
-    foreach (['string', 'str', 'zval'] as $type) {
+    foreach (['string', 'cstr', 'str', 'zval'] as $type) {
         foreach (['', 'x', "a\0b", "\xff\xfe", str_repeat('owned', 30)] as $value) {
             same($value, parse($type, $single, $value));
             same(true, checkStringArguments($value));
@@ -85,10 +85,10 @@ foreach ([true, false] as $single) {
     }
 
     $resource = fopen('php://memory', 'r+');
-    $values = ['u8' => 42, 'f32' => 1.5, 'string' => 'text', 'str' => 'text', 'zval' => 'text',
+    $values = ['u8' => 42, 'f32' => 1.5, 'string' => 'text', 'cstr' => 'text', 'str' => 'text', 'zval' => 'text',
         'int-zval' => -500, 'float-zval' => PHP_FLOAT_MAX, 'bool-zval' => true,
         'array-zval' => ['key' => 42], 'object-zval' => new stdClass, 'resource-zval' => $resource];
-    $coercedNull = ['u8' => 0, 'f32' => 0.0, 'string' => '', 'str' => '', 'zval' => '',
+    $coercedNull = ['u8' => 0, 'f32' => 0.0, 'string' => '', 'cstr' => '', 'str' => '', 'zval' => '',
         'int-zval' => 0, 'float-zval' => 0.0, 'bool-zval' => false];
     foreach ([[1, true], ['x', true], [0.0, false], ['', false]] as [$input, $expected]) {
         same($expected, parse('bool-zval', $single, $input));

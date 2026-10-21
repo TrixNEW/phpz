@@ -348,7 +348,7 @@ pub const CallFrame = opaque {
                 .null => unreachable,
                 .int => struct { as: enum { i8, i16, i32, i64, isize, u8, u16, u32, u64, usize, zval } = .i64, optional: bool = false, nullable: bool = false },
                 .float => struct { as: enum { f32, f64, zval } = .f64, optional: bool = false, nullable: bool = false },
-                .string => struct { as: enum { string, str, zval } = .string, optional: bool = false, nullable: bool = false },
+                .string => struct { as: enum { string, cstr, str, zval } = .string, optional: bool = false, nullable: bool = false },
                 .resource => struct { as: enum { value, stream, zval } = .value, optional: bool = false, nullable: bool = false },
                 .mixed => struct { optional: bool = false, one_of: ?[]const ExpectArgKind = null },
                 .object => struct { as: enum { value, zval } = .value, optional: bool = false, nullable: bool = false, instanceof: bool = false },
@@ -448,6 +448,7 @@ pub const CallFrame = opaque {
             },
             .string => |s| switch (s.as) {
                 .string => []const u8,
+                .cstr => [:0]const u8,
                 .str => *zend.String,
                 .zval => *Zval,
             },
@@ -557,7 +558,10 @@ pub const CallFrame = opaque {
     /// `.kind` only checks the referenced value; it does not change the result type.
     /// Numeric `.as` selects the Zig width (e.g. `.u8`, `.f32`); out-of-range
     /// values raise a parameter ValueError. Strings default to `.string`, with
-    /// `.str` borrowing a `*zend.String` without allocation or addref.
+    /// `.cstr` borrowing a NUL-terminated `[:0]const u8` and `.str` borrowing a
+    /// `*zend.String`, without allocation or addref. Keep the source string alive
+    /// and unchanged while using these views. `.cstr` preserves embedded NULs;
+    /// passing its `.ptr` to a C string API stops at the first NUL.
     /// `.resource.as = .stream` borrows a `*Stream` from an ordinary or persistent
     /// stream resource; keep it alive and open. Invalid streams raise PHP TypeError.
     /// `nullable` wraps it in `Nullable(*Stream)`; `optional` adds an outer `?`.
@@ -736,7 +740,12 @@ pub const CallFrame = opaque {
                 }
                 break :blk @as(T, @floatCast(value));
             },
-            .string => |s| Zval.raw.asUnchecked(zv, if (s.as == .str) .str else .string),
+            .string => |s| switch (s.as) {
+                .string => Zval.raw.asUnchecked(zv, .string),
+                .cstr => Zval.raw.asUnchecked(zv, .str).slice(),
+                .str => Zval.raw.asUnchecked(zv, .str),
+                .zval => Zval.from(zv),
+            },
             .resource => |s| switch (s.as) {
                 .value => Zval.raw.asUnchecked(zv, .resource),
                 .stream => Stream.fromResource(Zval.raw.asUnchecked(zv, .resource)) catch return error.PhpArgumentTypeError,

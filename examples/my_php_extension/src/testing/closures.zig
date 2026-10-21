@@ -63,6 +63,11 @@ fn echoBytes(bytes: []const u8) []const u8 {
     return bytes;
 }
 
+fn echoCstr(bytes: [:0]const u8) ![:0]const u8 {
+    try std.testing.expectEqual(@as(u8, 0), bytes[bytes.len]);
+    return bytes;
+}
+
 fn ownedString() *phpz.zend.String {
     return phpz.zend.String.init("owned", false);
 }
@@ -136,6 +141,8 @@ pub fn makeFnClosure(ctx: phpz.Ctx, kind_arg: ?[]const u8) !void {
         phpz.closure.createFromFn(optionalCallable, ctx.retval);
     } else if (std.mem.eql(u8, kind, "echo_bytes")) {
         phpz.closure.createFromFn(echoBytes, ctx.retval);
+    } else if (std.mem.eql(u8, kind, "echo_cstr")) {
+        phpz.closure.createFromFn(echoCstr, ctx.retval);
     } else if (std.mem.eql(u8, kind, "owned_string")) {
         phpz.closure.createFromFn(ownedString, ctx.retval);
     } else if (std.mem.eql(u8, kind, "borrowed_string")) {

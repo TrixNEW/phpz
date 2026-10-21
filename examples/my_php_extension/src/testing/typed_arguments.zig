@@ -29,7 +29,7 @@ pub fn typedArgument(ctx: phpz.Ctx) !void {
                 return parse(ctx, single, .{ .float = .{ .as = output, .optional = optional, .nullable = nullable } });
             }
         }
-        inline for (.{ .string, .str, .zval }) |output| {
+        inline for (.{ .string, .cstr, .str, .zval }) |output| {
             if (std.mem.eql(u8, mode, prefix ++ @tagName(output))) {
                 return parse(ctx, single, .{ .string = .{ .as = output, .optional = optional, .nullable = nullable } });
             }
@@ -78,7 +78,7 @@ fn writeValue(ctx: phpz.Ctx, value: anytype) !void {
         const resource = try Zval.from(ctx.call.arg(3)).as(.resource);
         try std.testing.expect(value == try phpz.Stream.fromResource(resource));
         ctx.ret(.string, "stream");
-    } else if (T == *phpz.zend.String or T == []const u8) {
+    } else if (T == *phpz.zend.String or T == []const u8 or T == [:0]const u8) {
         const source = Zval.from(ctx.call.arg(3));
         const str = try source.as(.str);
         const count = str.refcount();
@@ -88,6 +88,7 @@ fn writeValue(ctx: phpz.Ctx, value: anytype) !void {
             ctx.ret(.str, value.copy());
         } else {
             try std.testing.expect(value.ptr == str.slice().ptr);
+            if (T == [:0]const u8) try std.testing.expectEqual(@as(u8, 0), value[value.len]);
             ctx.ret(.string, value);
         }
         if (!str.isInterned()) {

@@ -36,6 +36,10 @@ $called = false;
 checkTyped($callable(function () use (&$called): void { $called = true; }), 'called');
 checkTyped($called, true);
 checkTyped(makeFnClosure('echo_bytes')("a\0b"), "a\0b");
+$cstr = makeFnClosure('echo_cstr');
+foreach (['', "a\0b"] as $text) {
+    checkTyped($cstr($text), $text);
+}
 
 $mixed = makeFnClosure('mixed');
 foreach ([null, 42, 1.5, true, "a\0b"] as $value) {

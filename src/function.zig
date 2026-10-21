@@ -171,6 +171,8 @@ pub fn functions(comptime T: type, comptime options: struct { namespace: []const
 /// cannot express.
 /// A `*Stream` parameter borrows a PHP stream; keep its resource alive and open.
 /// `?T` permits omission; `CallFrame.Nullable(T)` permits PHP null.
+/// `[:0]const u8` borrows a NUL-terminated string slice, preserving embedded NULs.
+/// String slice returns are copied using their full length.
 ///
 /// When the function takes neither a context nor PHP parameters, extra arguments
 /// are rejected. A context-only handler retains control of its own parsing.
@@ -279,6 +281,7 @@ fn specFor(comptime T: type) CallFrame.ExpectArgKind.Spec {
         return .{ .float = .{ .as = if (Base == f32) .f32 else .f64, .optional = optional, .nullable = nullable } };
     }
     if (Base == []const u8) return .{ .string = .{ .as = .string, .optional = optional, .nullable = nullable } };
+    if (Base == [:0]const u8) return .{ .string = .{ .as = .cstr, .optional = optional, .nullable = nullable } };
     if (Base == *zend.String) return .{ .string = .{ .as = .str, .optional = optional, .nullable = nullable } };
     if (Base == bool) return .{ .bool = .{ .optional = optional, .nullable = nullable } };
     if (Base == *zend.Array) return .{ .array = .{ .optional = optional, .nullable = nullable } };
@@ -404,7 +407,7 @@ pub fn setReturnValue(retval: *Zval, value: anytype) anyerror!void {
         }
     }
     if (T == f32 or T == f64) return retval.set(.float, @floatCast(value));
-    if (T == []u8 or T == []const u8) return retval.set(.string, value);
+    if (T == []u8 or T == []const u8 or T == [:0]u8 or T == [:0]const u8) return retval.set(.string, value);
     if (T == *zend.String) return retval.set(.str, value);
     if (T == *zend.Array) return retval.set(.array, value);
     if (T == *zend.Object) return retval.set(.object, value);

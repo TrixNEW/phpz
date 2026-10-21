@@ -30,7 +30,7 @@ foreach ([true, false] as $single) {
         foreach (['1.5', false, [], null] as $bad) fails(fn() => parse($type, $single, $bad), 'float');
     }
     same(-500.0, parse('float-zval', $single, -500));
-    foreach (['string', 'str', 'zval'] as $type) {
+    foreach (['string', 'cstr', 'str', 'zval'] as $type) {
         foreach ([1, false, 1.5, [], new stdClass, $stringable, null] as $bad) fails(fn() => parse($type, $single, $bad), 'string');
     }
     foreach ([1, 'x', 0.0, null] as $bad) fails(fn() => parse('bool-zval', $single, $bad), 'bool');
