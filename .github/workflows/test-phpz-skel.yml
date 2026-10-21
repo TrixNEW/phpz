@@ -23,6 +23,10 @@ on:
       - ".github/workflows/test-phpz-skel.yml"
   workflow_dispatch:
 
+env:
+  # Match the default checkout, including the merge commit for fork PRs.
+  PHPZ_REF: ${{ github.server_url }}/${{ github.repository }}/archive/${{ github.sha }}.tar.gz
+
 jobs:
   unix:
     name: test (${{ matrix.os }}, php 8.2)
@@ -43,13 +47,9 @@ jobs:
           tools: php-config
       - name: Run phpz_skel tests
         shell: bash
-        env:
-          PHPZ_REF: ${{ github.head_ref || github.ref_name || 'dev' }}
         run: bash .github/scripts/test-phpz-skel.sh
       - name: Run phpz_skel tests (--onlyunix)
         shell: bash
-        env:
-          PHPZ_REF: ${{ github.head_ref || github.ref_name || 'dev' }}
         run: bash .github/scripts/test-phpz-skel.sh -- --onlyunix
 
   windows:
@@ -75,12 +75,10 @@ jobs:
       - name: Run phpz_skel tests
         shell: bash
         env:
-          PHPZ_REF: ${{ github.head_ref || github.ref_name || 'dev' }}
           ZIG_TARGET: native-native-msvc
         run: bash .github/scripts/test-phpz-skel.sh
       - name: Run phpz_skel tests (--onlywindows)
         shell: bash
         env:
-          PHPZ_REF: ${{ github.head_ref || github.ref_name || 'dev' }}
           ZIG_TARGET: native-native-msvc
         run: bash .github/scripts/test-phpz-skel.sh -- --onlywindows
