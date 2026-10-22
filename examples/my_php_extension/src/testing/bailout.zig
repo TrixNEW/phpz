@@ -45,7 +45,7 @@ pub fn allocatorAlignment() !bool {
     return true;
 }
 
-/// PHP: MyPHPExt\Test\allocatorBailout(): array
+/// PHP: MyPHPExt\Test\allocatorBailout(): void
 pub fn allocatorBailout(ctx: phpz.Ctx) !void {
     try ctx.call.expectNoArgs();
 
@@ -58,11 +58,15 @@ pub fn allocatorBailout(ctx: phpz.Ctx) !void {
         error.OutOfMemory => out_of_memory = true,
     };
 
-    var result = phpz.Zval.Array.empty(ctx.retval.ptr());
-    result.set(.bool, "out_of_memory", out_of_memory);
-    result.set(.bool, "scope_defer", scope_defer);
-    result.set(.bool, "cleanup_defer", cleanup_defer);
-    result.set(.bool, "freed_blocks", freed_blocks > 0);
+    // Report cleanup before propagating the fatal OOM. Newer PHP versions queue
+    // OOM until a safe point, so PHP code cannot inspect a returned value.
+    _ = phpz.printf("out_of_memory=%d scope_defer=%d cleanup_defer=%d freed_blocks=%d\n", .{
+        @as(c_int, @intFromBool(out_of_memory)),
+        @as(c_int, @intFromBool(scope_defer)),
+        @as(c_int, @intFromBool(cleanup_defer)),
+        @as(c_int, @intFromBool(freed_blocks > 0)),
+    });
+    if (out_of_memory) return error.OutOfMemory;
 }
 
 /// PHP: MyPHPExt\Test\nativeOutOfMemory(): void

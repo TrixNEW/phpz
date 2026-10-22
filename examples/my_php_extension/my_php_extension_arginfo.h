@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: 9fa1c3c978cb9ba7804c55573168f3b5bd3d5b0e */
+ * Stub hash: b932b7e30cea25ab76af8d62505fdef7e58f211e */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -330,7 +330,7 @@ ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_MyPHPExt_Test_wrapClosure, 0, 1, 
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, class, IS_STRING, 1, "null")
 ZEND_END_ARG_INFO()
 
-#define arginfo_MyPHPExt_Test_allocatorBailout arginfo_MyPHPExt_Test_iterateWhileMutating
+#define arginfo_MyPHPExt_Test_allocatorBailout arginfo_hello
 
 #define arginfo_MyPHPExt_Test_allocatorAlignment arginfo_MyPHPExt_Test_checkNativeTsrmThreads
 

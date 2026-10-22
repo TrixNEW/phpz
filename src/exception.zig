@@ -1,14 +1,16 @@
-//! PHP Throwable state and the internal exit/die signal.
+//! PHP Throwable state and the internal unwind signal.
 //! Includes both Exception and Error subclasses (TypeError, ValueError, etc.),
 //! which share Zend's EG(exception). E_* diagnostics belong to errors.zig.
+//! The unwind signal covers exit/die and, on supported PHP versions, delayed OOM.
 const phpz = @import("root.zig");
 const c = phpz.c;
 const globals = phpz.globals;
 const zend = @import("zend.zig");
 const errors = @import("errors.zig");
 
-/// PHP exceptions and the internal exit/die signal. Both remain pending in Zend.
+/// PHP exceptions and the internal unwind signal. Both remain pending in Zend.
 /// Ordinary Throwables share PhpException; inspect get() for their PHP class.
+/// UnwindExit can indicate exit/die or delayed OOM.
 /// Propagate UnwindExit after native cleanup; do not resume normal PHP execution.
 pub const Error = error{ PhpException, UnwindExit };
 
@@ -122,12 +124,14 @@ pub inline fn check() Error!void {
     if (pending()) |pending_error| return pending_error;
 }
 
-/// Check whether an exception is PHP's internal exit/die control signal.
+/// Check whether an exception is PHP's internal unwind signal.
+/// This identifies the signal, not its cause: exit/die or delayed OOM.
 pub inline fn isUnwindExit(ex: *zend.Object) bool {
     return c.zend_is_unwind_exit(ex.ptr());
 }
 
-/// Consume a pending PHP exit/die signal and return its exit status.
+/// Consume a pending PHP unwind signal and return the current exit status.
+/// The signal can come from exit/die or delayed OOM; consuming it does not recover the request.
 /// Returns null without changing an ordinary exception or the exit status.
 /// The host must still finish request shutdown and check its final exit status.
 pub fn takeUnwindExit() ?ExitStatus {

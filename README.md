@@ -132,22 +132,25 @@ Check out the [`examples/`](./examples/) directory for complete working examples
 Zend APIs, zvals, `php_allocator` and request memory belong to the PHP thread that is running the request.
 Native worker threads must not touch them, under NTS or ZTS.
 
-- Copy arguments into native memory (for example `std.heap.c_allocator`) before handing work to a thread, and
-  copy results into PHP values back on the PHP thread, as `ext-bedwire` does with its bounded rings.
-- Wake the PHP side through your own primitive (a pipe, eventfd or polled queue) and drain it from a PHP call.
-- Objects and module globals are per request thread under ZTS; do not share them across threads.
-
 ## Bailouts
 
-A Zend bailout (a fatal error, including the memory limit) is a `longjmp`: Zig `defer` and `errdefer`
+A Zend bailout uses `longjmp`: Zig `defer` and `errdefer`
 between the bailout and the boundary that catches it do not run.
 
-- `php_allocator` and the `try*` APIs (`tryCall`, `tryNew`, `tryEval`, ...) catch the bailout and return
-  `error.ZendBailout` or `error.OutOfMemory`, so your `errdefer` runs. Propagate those errors; phpz resumes the
-  bailout when the handler returns. PHP has already reported the fatal error and the request will end.
+- `php_allocator` uses PHP's fallible allocation API when available, or catches the immediate OOM bailout
+  on older PHP versions. Both paths return `error.OutOfMemory`, allowing the caller's Zig cleanup to run.
+  Propagate the error: phpz handlers process a queued OOM or resume the earlier bailout. With delayed OOM,
+  PHP leaves `UnwindExit` pending when an execution frame is available; otherwise it bails out.
+- The `try*` APIs (`tryCall`, `tryNew`, `tryEval`, ...) convert an escaping bailout to `error.ZendBailout`.
+  Cleanup outside that boundary can run; cleanup skipped inside it is not replayed. These APIs can also
+  return `error.UnwindExit` for exit/die or delayed OOM. Propagate these errors after native cleanup;
+  standalone hosts must finish request shutdown.
 - Other Zend calls can bail out directly. Keep native resources that must be released on bailout in a
   `GuardCtx` scope, or in objects PHP destroys at request shutdown.
-- An `error.OutOfMemory` from a non-PHP allocator becomes a PHP fatal "Out of memory" error.
+- An `error.OutOfMemory` without an existing PHP OOM, such as a native allocation failure, becomes a PHP
+  fatal "Out of memory" error.
+- On PHP versions with a hard memory limit, a non-fallible allocation that would exceed it terminates
+  the process directly, without Zig cleanup or PHP request shutdown.
 
 ## Acknowledgements
 

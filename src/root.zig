@@ -79,8 +79,9 @@ pub fn eval(code: []const u8, retval: ?*Zval, name: [:0]const u8) (error{CodeExe
 }
 
 /// Like eval, but converts a PHP bailout to error.ZendBailout. Ordinary PHP
-/// exceptions return PhpException, exit/die returns UnwindExit; both remain pending for the caller.
-/// After a bailout, finish request shutdown instead of continuing PHP execution.
+/// exceptions return PhpException; exit/die and delayed OOM can return UnwindExit.
+/// Both exception signals remain pending for the caller.
+/// After ZendBailout or UnwindExit, finish native cleanup and request shutdown.
 /// This boundary does not include subsequent exception reporting or cleanup.
 pub fn tryEval(code: []const u8, retval: ?*Zval, name: [:0]const u8) (error{CodeExecutionFailed} || exception.Error || zend.bailout.Error)!void {
     return zend.bailout.run(eval, .{ code, retval, name });

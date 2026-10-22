@@ -520,8 +520,9 @@ pub const ObjectHandlers = struct {
 ///   produce a PHP TypeError describing the unsupported operation or operands.
 /// - Other Zig errors produce a PHP Error with the error name and callback context.
 /// - An existing PHP exception is preserved instead of creating another one.
-/// - `error.OutOfMemory` and `error.ZendBailout` always resume Zend bailout,
-///   even when a PHP exception is already pending.
+/// - `error.OutOfMemory` delivers PHP's fatal OOM after callback cleanup,
+///   preserving a delayed OOM's UnwindExit when available.
+/// - `error.ZendBailout` resumes Zend bailout, even with a pending exception.
 pub fn Class(comptime class_name: [:0]const u8, comptime T: type, comptime options: anytype) type {
     const resolved_options: Resolved(T) = .resolve(class_name, options);
     return switch (resolved_options.layout) {

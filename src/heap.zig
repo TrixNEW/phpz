@@ -5,14 +5,14 @@ const Alignment = std.mem.Alignment;
 const c = @import("root.zig").c;
 const zend = @import("zend.zig");
 
-/// Allocate request memory. Like PHP's emalloc, allocation failure bails out;
+/// Allocate request memory using PHP's emalloc and its native OOM policy;
 /// use php_allocator when a Zig OutOfMemory error is required.
 pub inline fn emalloc(size: usize) ?*anyopaque {
     return emallocAt(size, @returnAddress());
 }
 
 /// Resize request memory, preserving its contents. A null pointer allocates.
-/// Allocation failure bails out, leaving the original allocation owned by caller.
+/// Uses PHP's native OOM policy. Prefer php_allocator for fallible resizing.
 pub inline fn erealloc(memory: ?*anyopaque, size: usize) ?*anyopaque {
     return ereallocAt(memory, size, @returnAddress());
 }
@@ -38,6 +38,28 @@ fn ereallocAt(memory: ?*anyopaque, size: usize, address: usize) ?*anyopaque {
     return c.erealloc(memory, size);
 }
 
+fn femallocAt(size: usize, address: usize) ?*anyopaque {
+    if (comptime @hasDecl(c, "_femalloc")) {
+        if (comptime c.ZEND_DEBUG == 1) {
+            const src = DebugSourceLocation.resolve(address);
+            return c._femalloc(size, src.file.ptr, @intCast(src.line), null, 0);
+        }
+        return c._femalloc(size);
+    }
+    return zend.bailout.run(emallocAt, .{ size, address }) catch null;
+}
+
+fn fereallocAt(memory: ?*anyopaque, size: usize, address: usize) ?*anyopaque {
+    if (comptime @hasDecl(c, "_ferealloc")) {
+        if (comptime c.ZEND_DEBUG == 1) {
+            const src = DebugSourceLocation.resolve(address);
+            return c._ferealloc(memory, size, src.file.ptr, @intCast(src.line), null, 0);
+        }
+        return c._ferealloc(memory, size);
+    }
+    return zend.bailout.run(ereallocAt, .{ memory, size, address }) catch null;
+}
+
 fn efreeAt(memory: *anyopaque, address: usize) void {
     if (comptime c.ZEND_DEBUG == 1) {
         const src = DebugSourceLocation.resolve(address);
@@ -58,12 +80,11 @@ fn efreeAt(memory: *anyopaque, address: usize) void {
 /// multi-frame source location trace using DWARF debug info, so PHP's leak reports point to
 /// the actual allocation site rather than this file.
 ///
-/// `emalloc` / `erealloc` never return `null` on failure. Instead, PHP raises a
-/// fatal error and performs a Zend bailout. This allocator catches that bailout
-/// and reports allocation failure through Zig's allocator `null` path, which is
-/// surfaced as `error.OutOfMemory` by `std.mem.Allocator`.
-/// PHP has already raised a fatal error by then, so propagate OutOfMemory instead of
-/// recovering; phpz handlers resume the bailout once Zig cleanup has run.
+/// Uses PHP's fallible allocation API when available, or catches the immediate
+/// Zend bailout on older PHP versions. Both report failure through Zig's allocator
+/// `null` path, surfaced as `error.OutOfMemory` by `std.mem.Allocator`.
+/// PHP has queued or raised a fatal error by then, so propagate OutOfMemory instead
+/// of recovering; phpz handlers deliver the fatal error after Zig cleanup runs.
 ///
 /// Memory is request-scoped: never keep it past request shutdown or hand it to
 /// threads that PHP does not manage.
@@ -95,11 +116,11 @@ const php_allocator_impl = struct {
     fn alloc(context: *anyopaque, len: usize, alignment: Alignment, return_address: usize) ?[*]u8 {
         _ = context;
         if (!isOverAligned(alignment)) {
-            return @ptrCast(zend.bailout.run(emallocAt, .{ len, return_address }) catch return null);
+            return @ptrCast(femallocAt(len, return_address));
         }
         // The base pointer is stored in the word just below the aligned address.
         const size = std.math.add(usize, len, alignment.toByteUnits()) catch return null;
-        const base: usize = @intFromPtr(zend.bailout.run(emallocAt, .{ size, return_address }) catch return null);
+        const base: usize = @intFromPtr(femallocAt(size, return_address) orelse return null);
         const aligned = alignment.forward(base + @sizeOf(usize));
         @as(*usize, @ptrFromInt(aligned - @sizeOf(usize))).* = base;
         return @ptrFromInt(aligned);
@@ -115,7 +136,7 @@ const php_allocator_impl = struct {
     fn remap(context: *anyopaque, memory: []u8, alignment: Alignment, new_len: usize, return_address: usize) ?[*]u8 {
         _ = context;
         if (isOverAligned(alignment)) return null;
-        return @ptrCast(zend.bailout.run(ereallocAt, .{ memory.ptr, new_len, return_address }) catch return null);
+        return @ptrCast(fereallocAt(memory.ptr, new_len, return_address));
     }
 
     fn free(context: *anyopaque, memory: []u8, alignment: Alignment, return_address: usize) void {

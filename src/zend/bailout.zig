@@ -18,13 +18,21 @@ pub inline fn raise() noreturn {
     unreachable;
 }
 
-/// Resume Zend's bailout for error.ZendBailout and error.OutOfMemory at a PHP
-/// boundary, after Zig cleanup has run. An OutOfMemory that PHP did not report
-/// itself, e.g. from a native allocator, becomes a fatal error instead of a silent exit.
+/// Propagate error.ZendBailout and error.OutOfMemory at a PHP boundary after Zig
+/// cleanup, handling a queued OOM or resuming an immediate bailout. An OutOfMemory
+/// that PHP did not report itself, e.g. from a native allocator, becomes a fatal error.
 pub fn propagate(err: anyerror) void {
     @branchHint(.cold);
     if (err == error.ZendBailout) raise();
     if (err == error.OutOfMemory) {
+        if (comptime @hasDecl(c, "zend_handle_delayed_oom")) {
+            if (globals.executor().ptr().delayed_oom.state != c.ZEND_OOM_STATE_NONE) {
+                // Match ZEND_HAS_OOM(): cleanup may have already handled the OOM.
+                // The handler is idempotent; preserve its diagnostic and UnwindExit.
+                c.zend_handle_delayed_oom();
+                return;
+            }
+        }
         // Bailout sets CG(unclean_shutdown) and clears EG(current_execute_data).
         if (globals.compiler().ptr().unclean_shutdown and !c.zend_is_executing()) raise();
         c.zend_error_noreturn(c.E_ERROR, "Out of memory");

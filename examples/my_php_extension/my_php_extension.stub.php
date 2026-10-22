@@ -307,7 +307,7 @@ namespace MyPHPExt\Test {
         public function invokeCallback(mixed $value, bool $guarded = false): mixed {}
     }
 
-    function allocatorBailout(): array {}
+    function allocatorBailout(): void {}
 
     function allocatorAlignment(): bool {}
 

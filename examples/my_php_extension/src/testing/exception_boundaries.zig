@@ -17,6 +17,19 @@ pub fn checkExceptionBoundary(ctx: phpz.Ctx) !void {
 }
 
 fn invoke(frame: *phpz.CallFrame, api: []const u8, value: *phpz.Zval) !void {
+    if (std.mem.eql(u8, api, "oom-handled")) {
+        var callback: phpz.zend.Callable = .nil;
+        try callback.parse(value.ptr(), null);
+        const allocator = phpz.heap.php_allocator;
+        const block = allocator.alloc(u8, 64 * 1024 * 1024) catch |err| {
+            // Reentering PHP during cleanup handles the queued OOM before the
+            // original allocation error reaches this handler's boundary.
+            try std.testing.expectError(error.UnwindExit, callback.call(null, .{}, null));
+            return err;
+        };
+        allocator.free(block);
+        return error.ExpectedOutOfMemory;
+    }
     if (std.mem.startsWith(u8, api, "helper-")) {
         if (value.is(.bool) and try value.as(.bool)) {
             exitSignal();

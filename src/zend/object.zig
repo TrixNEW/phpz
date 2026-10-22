@@ -15,7 +15,8 @@ pub const Object = opaque {
     /// Create a standard object (stdClass).
     ///
     /// Ownership: caller owns the returned object; call `release()` when done.
-    /// Allocation failure raises a Zend bailout.
+    /// Uses PHP's native OOM policy: OOM may be delayed or bail out;
+    /// exceeding a hard memory limit terminates the process.
     pub fn std() *Object {
         const std_class = globals.class.rawEntry("zend_standard_class_def");
         return initStd(.from(std_class));
@@ -29,7 +30,8 @@ pub const Object = opaque {
     /// classes, use init(), which wraps object_init_ex().
     ///
     /// Ownership: caller owns the returned object; call `release()` when done.
-    /// Allocation failure raises a Zend bailout.
+    /// Uses PHP's native OOM policy: OOM may be delayed or bail out;
+    /// exceeding a hard memory limit terminates the process.
     pub fn initStd(ce: *ClassEntry) *Object {
         const obj = c.zend_objects_new(ce.ptr());
         c.object_properties_init(obj, ce.ptr());
