@@ -3,7 +3,7 @@ const phpz = @import("phpz");
 
 pub fn readLastError(clear_exception: bool) !?*phpz.zend.Array {
     if (clear_exception) {
-        const thrown = phpz.exception.throwException(phpz.ClassEntry.from(phpz.c.zend_ce_exception), "pending fixture", 0);
+        const thrown = phpz.exception.throwException(phpz.ClassEntry.from(phpz.globals.class.entry("Exception")), "pending fixture", 0);
         const pending = phpz.exception.pending();
         phpz.exception.clear();
         try std.testing.expect(thrown == error.PhpException);
