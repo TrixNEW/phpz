@@ -8,7 +8,16 @@ if (!function_exists('proc_open')) die('skip proc_open is required');
 ?>
 --FILE--
 <?php
-$module = realpath(__DIR__ . '/../modules/' . (PHP_OS_FAMILY === 'Windows' ? 'php_my_php_extension.dll' : 'my_php_extension.so'));
+$probe = proc_open([PHP_BINARY, '-n', '-r', 'exit(extension_loaded("my_php_extension") ? 0 : 1);'], [], $pipes);
+if (!is_resource($probe)) throw new RuntimeException('Cannot detect builtin extension');
+$builtin = proc_close($probe) === 0;
+$command = [PHP_BINARY, '-n', '-d', 'display_errors=1', '-d', 'log_errors=0'];
+if (!$builtin) {
+    $module = realpath(__DIR__ . '/../modules/' . (PHP_OS_FAMILY === 'Windows' ? 'php_my_php_extension.dll' : 'my_php_extension.so'));
+    if ($module === false) throw new RuntimeException('Cannot find extension module');
+    $command[] = '-d';
+    $command[] = 'extension=' . $module;
+}
 $cases = [
     'eval' => ['eval', "'exit(23);'"],
     'tryEval' => ['tryEval', "'exit(23);'"],
@@ -87,7 +96,7 @@ foreach ($cases as $name => $case) {
     $code = 'register_shutdown_function(static function() { echo "shutdown\n"; });' . $setup
         . 'try { MyPHPExt\\Test\\checkExceptionBoundary(' . var_export($api, true) . ', ' . $value . '); }'
         . 'catch (Throwable $e) {' . $checkException . ' echo "caught ordinary\n"; } echo "continued\n";';
-    $process = proc_open([PHP_BINARY, '-n', '-d', 'display_errors=1', '-d', 'log_errors=0', '-d', 'extension=' . $module, '-r', $code],
+    $process = proc_open([...$command, '-r', $code],
         [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
     if (!is_resource($process)) throw new RuntimeException('Cannot start test process');
     fclose($pipes[0]);
