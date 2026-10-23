@@ -82,6 +82,12 @@ pub fn build(b: *std.Build) void {
     } else {
         b.installArtifact(extension);
     }
+
+    // Regenerate arginfo only when explicitly requested.
+    const gen_stub_step = b.step("gen-stub", "Regenerate arginfo from the PHP stub");
+    const gen_stub_cmd = addRunPhpTool(b, phpz_dep.path("tools/php/gen_stub.php"), "build/gen_stub.php");
+    gen_stub_cmd.addArg(extension_name ++ ".stub.php");
+    gen_stub_step.dependOn(&gen_stub_cmd.step);
 }
 
 // Update the project-local tool from the bundle before running it.

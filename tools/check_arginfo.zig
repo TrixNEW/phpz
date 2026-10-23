@@ -1,34 +1,37 @@
 const std = @import("std");
 
+const regeneration_hint = "\n\nRun 'zig build gen-stub' to regenerate the arginfo header.";
+const usage_hint = "\nUsage: {s} <stub.php> <arginfo.h>";
+
 pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
 
     var args = try init.minimal.args.iterateAllocator(arena);
 
     const cmd = args.next() orelse "check-arginfo";
-    const stub_path = args.next() orelse fatal("usage: {s} <stub.php> <arginfo.h>", .{cmd});
-    const arginfo_path = args.next() orelse fatal("usage: {s} <stub.php> <arginfo.h>", .{cmd});
-    if (args.next() != null) {
-        fatal("usage: {s} <stub.php> <arginfo.h>", .{cmd});
+    const stub_path = args.next() orelse fatal("missing PHP stub file path" ++ usage_hint, .{cmd});
+    const arginfo_path = args.next() orelse fatal("missing arginfo header path" ++ usage_hint, .{cmd});
+    if (args.next()) |extra| {
+        fatal("unexpected argument: {s}" ++ usage_hint, .{ extra, cmd });
     }
 
     const cwd = std.Io.Dir.cwd();
     const stub = cwd.readFileAllocOptions(init.io, stub_path, arena, .unlimited, .of(u8), 0) catch |err| {
-        fatal("unable to read {s}: {s}", .{ stub_path, @errorName(err) });
+        fatal("cannot read PHP stub file {s}: {s}", .{ stub_path, @errorName(err) });
     };
     const arginfo = cwd.readFileAllocOptions(init.io, arginfo_path, arena, .unlimited, .of(u8), 0) catch |err| {
-        fatal("unable to read {s}: {s}", .{ arginfo_path, @errorName(err) });
+        fatal("cannot read arginfo header {s}: {s}", .{ arginfo_path, @errorName(err) });
     };
 
     const expected = computeStubHash(stub);
     const actual = parseArginfoHash(arginfo) catch |err| switch (err) {
-        error.MissingStubHash => fatal("{s} has no gen_stub.php hash", .{arginfo_path}),
-        error.InvalidStubHash => fatal("{s} has an invalid gen_stub.php hash", .{arginfo_path}),
+        error.MissingStubHash => fatal("missing stub hash in {s}" ++ regeneration_hint, .{arginfo_path}),
+        error.InvalidStubHash => fatal("invalid stub hash in {s}" ++ regeneration_hint, .{arginfo_path}),
     };
     if (!std.mem.eql(u8, &expected, actual)) {
         fatal(
-            "{s} does not match {s}\nexpected Stub hash: {s}\nfound Stub hash:    {s}\nregenerate it with: php /path/to/php-src/build/gen_stub.php {s}\nor disable this check with -Dcheck-arginfo=false",
-            .{ arginfo_path, stub_path, &expected, actual, stub_path },
+            "stub hash mismatch between {s} and {s}\n  Expected: {s}\n  Found:    {s}" ++ regeneration_hint ++ "\nTo skip this check, pass -Dcheck-arginfo=false.",
+            .{ arginfo_path, stub_path, &expected, actual },
         );
     }
 }

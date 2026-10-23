@@ -7,6 +7,7 @@ zig-out
 .zig-cache
 /modules
 zig-pkg
+/Zend/
 
 # php build system
 *.lo
