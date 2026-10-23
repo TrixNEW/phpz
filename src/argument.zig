@@ -125,7 +125,7 @@ pub const Identifier = union(enum) {
     pub fn typeError(self: Identifier, comptime format: [:0]const u8, args: anytype) exception.Error {
         return switch (self) {
             .position => |position| exception.argumentTypeError(position, format, args),
-            .name => |name| namedError(name, c.zend_ce_type_error, format, args),
+            .name => |name| namedError(name, .builtin("zend_ce_type_error"), format, args),
         };
     }
 
@@ -134,16 +134,16 @@ pub const Identifier = union(enum) {
     pub fn valueError(self: Identifier, comptime format: [:0]const u8, args: anytype) exception.Error {
         return switch (self) {
             .position => |position| exception.argumentValueError(position, format, args),
-            .name => |name| namedError(name, c.zend_ce_value_error, format, args),
+            .name => |name| namedError(name, .builtin("zend_ce_value_error"), format, args),
         };
     }
 
-    fn namedError(name: [:0]const u8, ce: *c.zend_class_entry, comptime format: [:0]const u8, args: anytype) exception.Error {
+    fn namedError(name: [:0]const u8, ce: *ClassEntry, comptime format: [:0]const u8, args: anytype) exception.Error {
         @branchHint(.cold);
         if (exception.pending()) |err| return err;
         const function_name = zend.Function.activeName();
         defer function_name.release();
-        return exception.throwError(ClassEntry.from(ce), "%s(): Argument ($%s) " ++ format, .{ function_name.cstr(), name.ptr } ++ args);
+        return exception.throwError(ce, "%s(): Argument ($%s) " ++ format, .{ function_name.cstr(), name.ptr } ++ args);
     }
 
     fn expectedTypeError(self: Identifier, expected: c.zend_expected_type, zv: *c.zval) exception.Error {

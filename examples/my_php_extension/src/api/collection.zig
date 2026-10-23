@@ -7,9 +7,9 @@ const Collection = struct {
 
     fn register(register_fn: anytype) *phpz.ClassEntry {
         return register_fn(.{
-            phpz.globals.class.entry("ArrayAccess"),
-            phpz.globals.class.entry("Countable"),
-            phpz.globals.class.entry("Iterator"),
+            .builtin("ArrayAccess"),
+            .builtin("Countable"),
+            .builtin("Iterator"),
         });
     }
 

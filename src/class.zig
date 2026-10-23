@@ -181,9 +181,15 @@ fn Resolved(comptime T: type) type {
                 const c_register_fn = @field(c, fn_name);
                 const Args = std.meta.ArgsTuple(@TypeOf(c_register_fn));
                 if (@hasField(Options, "register")) {
+                    const class_arg_types: [@typeInfo(Args).@"struct".field_types.len]type = @splat(*zend.ClassEntry);
+                    const ClassArgs = @Tuple(&class_arg_types);
                     break :blk struct {
-                        fn typed(args: Args) *zend.ClassEntry {
-                            return .from(@call(.always_inline, c_register_fn, args));
+                        fn typed(args: ClassArgs) *zend.ClassEntry {
+                            var raw_args: Args = undefined;
+                            inline for (args, 0..) |entry, i| {
+                                raw_args[i] = entry.ptr();
+                            }
+                            return .from(@call(.always_inline, c_register_fn, raw_args));
                         }
 
                         fn call() anyerror!*zend.ClassEntry {
@@ -435,8 +441,8 @@ pub const ObjectHandlers = struct {
 /// support lifecycle options, which can be combined with registration:
 ///
 /// ```zig
-/// fn registerCollection(comptime register_fn: anytype) *phpz.ClassEntry {
-///     return register_fn(.{ParentClass.entry.ptr()});
+/// fn registerCollection(register_fn: anytype) *phpz.ClassEntry {
+///     return register_fn(.{ParentClass.entry});
 /// }
 ///
 /// const CollectionClass = phpz.Class("Vendor\\Collection", Collection, .{
@@ -468,9 +474,9 @@ pub const ObjectHandlers = struct {
 ///
 /// - `.methods`: omit or use `.automatic` for exact declaration discovery, or
 ///   provide a named struct for explicit bindings.
-/// - `.register`: receives the typed stub-generated registration function,
-///   supplies its parent class or interfaces, and returns `*ClassEntry` or an
-///   error union containing it.
+/// - `.register`: receives an adapter for the stub-generated registration function,
+///   supplies a tuple of `*ClassEntry` parent/interface pointers in stub parameter
+///   order, and returns `*ClassEntry` or an error union containing it.
 /// - `.init`: when omitted, uses `.default` if every field of `T` has a default
 ///   value, otherwise `.none`. Use `.none` to leave backing empty, `.default`
 ///   to create it with `.{}`, or a function returning `T` or `!T`.

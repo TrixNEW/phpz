@@ -1,5 +1,5 @@
 fn register(register_fn: anytype) *phpz.ClassEntry {
-    return register_fn(.{identifiable.Class.entry.ptr()});
+    return register_fn(.{identifiable.Class.entry});
 }
 
 /// PHP: MyPHPExt\Entity::__construct(int $id): void

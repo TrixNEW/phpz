@@ -40,53 +40,6 @@ pub inline fn stdObjectHandlers() c.zend_object_handlers {
     return global(.value, c.zend_object_handlers, "std_object_handlers");
 }
 
-pub const class = struct {
-    fn symbolName(comptime prefix: []const u8, comptime class_name: []const u8, comptime lowercase: bool) []const u8 {
-        const name = if (class_name.len > 0 and class_name[0] == '\\') class_name[1..] else class_name;
-        if (name.len == 0) @compileError("class entry name cannot be empty");
-
-        comptime var result: [prefix.len + name.len]u8 = undefined;
-        inline for (prefix, 0..) |ch, i| {
-            result[i] = ch;
-        }
-        inline for (name, 0..) |ch, i| {
-            result[prefix.len + i] = comptime switch (ch) {
-                '\\' => '_',
-                else => if (lowercase) std.ascii.toLower(ch) else ch,
-            };
-        }
-
-        const final = result;
-        return &final;
-    }
-
-    fn symbol(comptime class_name: []const u8) []const u8 {
-        return comptime blk: {
-            const zend_original = symbolName("zend_ce_", class_name, false);
-            if (@hasDecl(c, zend_original)) break :blk zend_original;
-
-            const zend_lowercase = symbolName("zend_ce_", class_name, true);
-            if (@hasDecl(c, zend_lowercase)) break :blk zend_lowercase;
-
-            const spl_original = symbolName("spl_ce_", class_name, false);
-            if (@hasDecl(c, spl_original)) break :blk spl_original;
-
-            const spl_lowercase = symbolName("spl_ce_", class_name, true);
-            if (@hasDecl(c, spl_lowercase)) break :blk spl_lowercase;
-
-            @compileError("class entry symbol not found: " ++ zend_original ++ ", " ++ zend_lowercase ++ ", " ++ spl_original ++ ", or " ++ spl_lowercase);
-        };
-    }
-
-    pub inline fn rawEntry(comptime name: []const u8) *c.zend_class_entry {
-        return global(.value, *c.zend_class_entry, name);
-    }
-
-    pub inline fn entry(comptime class_name: []const u8) *c.zend_class_entry {
-        return rawEntry(symbol(class_name));
-    }
-};
-
 const zts = c.USING_ZTS != 0;
 
 inline fn fastGlobals(comptime T: type, comptime offset_name: []const u8) *T {
@@ -219,6 +172,11 @@ pub const CompilerGlobals = opaque {
         return @ptrCast(@alignCast(self));
     }
 
+    /// Borrow the compiler class table, including classes registered during MINIT.
+    pub inline fn classes(self: *CompilerGlobals) *zend.Array {
+        return .from(self.ptr().class_table);
+    }
+
     // TODO: more impl...
 };
 
@@ -281,7 +239,6 @@ pub const PhpGlobals = opaque {
 test {
     std.testing.refAllDecls(@This());
     std.testing.refAllDecls(ExecutorGlobals.Superglobal);
-    std.testing.refAllDecls(@This().class);
     std.testing.refAllDecls(ExecutorGlobals);
     std.testing.refAllDecls(CompilerGlobals);
     std.testing.refAllDecls(PhpGlobals);

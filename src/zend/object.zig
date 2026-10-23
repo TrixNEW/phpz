@@ -3,7 +3,6 @@ const assert = std.debug.assert;
 
 const c = @import("../c.zig").c;
 const exception = @import("../exception.zig");
-const globals = @import("../globals.zig");
 const Zval = @import("../zval.zig").Zval;
 const Array = @import("array.zig").Array;
 const bailout = @import("bailout.zig");
@@ -18,8 +17,7 @@ pub const Object = opaque {
     /// Uses PHP's native OOM policy: OOM may be delayed or bail out;
     /// exceeding a hard memory limit terminates the process.
     pub fn std() *Object {
-        const std_class = globals.class.rawEntry("zend_standard_class_def");
-        return initStd(.from(std_class));
+        return initStd(.builtin("zend_standard_class_def"));
     }
 
     /// Allocate a standard-layout object and initialize its default properties.

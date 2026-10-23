@@ -5,9 +5,9 @@ const globals = @import("../globals.zig");
 const c = @import("../root.zig").c;
 const Zval = @import("../zval.zig").Zval;
 const Array = @import("array.zig").Array;
+const ClassConstant = @import("class_constant.zig").ClassConstant;
 const Function = @import("function.zig").Function;
 const Object = @import("object.zig").Object;
-const ClassConstant = @import("class_constant.zig").ClassConstant;
 const PropertyInfo = @import("property_info.zig").PropertyInfo;
 const String = @import("string.zig").String;
 
@@ -30,27 +30,40 @@ pub const ClassEntry = opaque {
         return @ptrCast(@alignCast(self));
     }
 
-    /// Look up a class by name in the global class table.
+    /// Borrow a built-in class entry by PHP class name or exact C symbol name.
+    /// Resolves the symbol at compile time, then reads its global pointer directly.
+    /// Does not query the class table or invoke autoloaders; the class must be initialized.
+    pub inline fn builtin(comptime class_name: []const u8) *ClassEntry {
+        return .from(globals.global(.value, *c.zend_class_entry, builtinSymbol(class_name)));
+    }
+
+    /// Look up a class in CG(class_table), during MINIT or a request.
+    /// The table must be initialized; under ZTS it belongs to the current thread.
     ///
     /// The class table is keyed by lowercase names, so `class_name` must
-    /// already be lowercase. This performs no normalization and never invokes
-    /// autoloaders. Use `lookup` for case-insensitive lookup or autoloading.
+    /// already be lowercase, without a leading backslash. This performs no
+    /// normalization, autoloading, or linked-state check. Use `lookup` for
+    /// case-insensitive lookup or autoloading.
     ///
     /// Ownership: borrowed class entry owned by the PHP runtime.
+    /// Do not retain request-local class entries across requests or threads.
     pub fn find(class_name: []const u8) ?*ClassEntry {
-        return globals.executor().classes().findPtr(ClassEntry, class_name);
+        return globals.compiler().classes().findPtr(ClassEntry, class_name);
     }
 
     /// Look up a class by name, optionally invoking registered autoloaders.
+    ///
+    /// Requires an active request with an initialized executor and EG(class_table).
+    /// Do not call during MINIT, even with `autoload = false`; use `builtin` or
+    /// `find` for classes that have already been registered during startup.
     ///
     /// Unlike `find`, the name is normalized following Zend's rules
     /// (case-insensitive, with a leading namespace separator stripped).
     /// When `autoload` is true, registered autoload callbacks are run if the
     /// class is not already loaded; they may execute arbitrary PHP code and
     /// trigger a Zend bailout. Returns null if the class cannot be found without
-    /// a pending exception; returns `error.PhpException` or `error.UnwindExit` if one is pending
-    /// after
-    /// lookup, including an exception raised by an autoloader.
+    /// a pending exception; returns `error.PhpException` or `error.UnwindExit` if one
+    /// is pending after lookup, including an exception raised by an autoloader.
     ///
     /// Ownership: borrowed class entry owned by the PHP runtime.
     pub fn lookup(class_name: []const u8, autoload: bool) exception.Error!?*ClassEntry {
@@ -266,6 +279,45 @@ pub const ClassEntry = opaque {
         return if (val) |value| .from(value) else null;
     }
 };
+
+fn builtinSymbolName(comptime prefix: []const u8, comptime class_name: []const u8, comptime lowercase: bool) []const u8 {
+    const name = if (class_name.len > 0 and class_name[0] == '\\') class_name[1..] else class_name;
+    if (name.len == 0) @compileError("class entry name cannot be empty");
+
+    comptime var result: [prefix.len + name.len]u8 = undefined;
+    inline for (prefix, 0..) |ch, i| {
+        result[i] = ch;
+    }
+    inline for (name, 0..) |ch, i| {
+        result[prefix.len + i] = comptime switch (ch) {
+            '\\' => '_',
+            else => if (lowercase) std.ascii.toLower(ch) else ch,
+        };
+    }
+
+    const final = result;
+    return &final;
+}
+
+fn builtinSymbol(comptime class_name: []const u8) []const u8 {
+    return comptime blk: {
+        if (@hasDecl(c, class_name)) break :blk class_name;
+
+        const zend_original = builtinSymbolName("zend_ce_", class_name, false);
+        if (@hasDecl(c, zend_original)) break :blk zend_original;
+
+        const zend_lowercase = builtinSymbolName("zend_ce_", class_name, true);
+        if (@hasDecl(c, zend_lowercase)) break :blk zend_lowercase;
+
+        const spl_original = builtinSymbolName("spl_ce_", class_name, false);
+        if (@hasDecl(c, spl_original)) break :blk spl_original;
+
+        const spl_lowercase = builtinSymbolName("spl_ce_", class_name, true);
+        if (@hasDecl(c, spl_lowercase)) break :blk spl_lowercase;
+
+        @compileError("class entry symbol not found: " ++ zend_original ++ ", " ++ zend_lowercase ++ ", " ++ spl_original ++ ", or " ++ spl_lowercase);
+    };
+}
 
 test {
     @import("std").testing.refAllDecls(ClassEntry);
