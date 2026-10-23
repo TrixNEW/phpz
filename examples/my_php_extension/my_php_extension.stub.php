@@ -227,7 +227,6 @@ namespace MyPHPExt\Test {
     function checkArrayHashTable(array $references): void {}
     function isArrayList(array $source): bool {}
     function arrayToList(array $source): array {}
-    function checkTsrmCache(): bool {}
     function iterateArray(array $values): array {}
     function lookupKey(array $values, string $key, bool $symtable): mixed {}
     function storeKey(array $values, string $key, mixed $value): array {}

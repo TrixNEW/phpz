@@ -139,7 +139,7 @@ fn makePhpModuleStartupFn(
             _ = module_type;
 
             tsrm.updateCache();
-            tsrm.detectTcbOffset();
+            tsrm.initTcbOffset();
             guard.ScopeObject.register(module_number);
 
             if (comptime has_symbols) {

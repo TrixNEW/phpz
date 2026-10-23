@@ -16,7 +16,7 @@ pub fn startup() error{TsrmStartupFailed}!void {
     if (comptime zts) {
         if (!c.php_tsrm_startup()) return error.TsrmStartupFailed;
         updateCache();
-        detectTcbOffset();
+        initTcbOffset();
     }
 }
 
@@ -46,15 +46,16 @@ pub fn envUnlock() void {
 /// On Linux, PHP exports the thread-pointer offset of its own TSRM cache for the
 /// JIT. The cache is valid while the calling thread owns live TSRM resources;
 /// it must not be read after freeThread() or shutdown(). Zero means unavailable.
-const tcb_supported = builtin.os.tag == .linux and (builtin.cpu.arch == .x86_64 or builtin.cpu.arch == .aarch64);
-var tcb_offset: usize = 0;
+const tcb_fast_path_enabled = zts and phpz_options.tsrmls_cache_tcb_fast_path and
+    builtin.os.tag == .linux and (builtin.cpu.arch == .x86_64 or builtin.cpu.arch == .aarch64);
+var tsrmls_cache_tcb_offset: usize = 0;
 
 /// Look up PHP's TLS layout. Called at module startup, before other threads run PHP.
-pub fn detectTcbOffset() void {
-    if (comptime zts and tcb_supported) @atomicStore(usize, &tcb_offset, c.tsrm_get_ls_cache_tcb_offset(), .monotonic);
+pub fn initTcbOffset() void {
+    if (comptime tcb_fast_path_enabled) @atomicStore(usize, &tsrmls_cache_tcb_offset, c.tsrm_get_ls_cache_tcb_offset(), .monotonic);
 }
 
-inline fn readTcb(offset: usize) ?*anyopaque {
+inline fn readCacheFromTcb(offset: usize) ?*anyopaque {
     // Same thread pointer reads as std.os.linux.tls, which is off limits with libc.
     const thread_pointer = switch (comptime builtin.cpu.arch) {
         .x86_64 => asm ("movq %%fs:0, %[tp]"
@@ -71,9 +72,9 @@ inline fn readTcb(offset: usize) ?*anyopaque {
 /// The calling thread's TSRM storage. ZTS only.
 pub inline fn localStorage() *anyopaque {
     if (comptime !zts) unreachable else {
-        if (comptime tcb_supported) {
-            const offset = @atomicLoad(usize, &tcb_offset, .monotonic);
-            if (offset != 0) if (readTcb(offset)) |ls| return ls;
+        if (comptime tcb_fast_path_enabled) {
+            const offset = @atomicLoad(usize, &tsrmls_cache_tcb_offset, .monotonic);
+            if (offset != 0) if (readCacheFromTcb(offset)) |ls| return ls;
         }
         if (comptime phpz_options.static_tsrmls_cache) {
             return c.phpz_static_tsrmls_cache_get() orelse refreshCache();
@@ -98,7 +99,7 @@ pub inline fn fastBulk(comptime T: type, offset: usize) *T {
 }
 
 /// Storage of a TSRM resource id, like TSRMG_BULK. ZTS only.
-pub inline fn bulk(comptime T: type, id: c_int) *T {
+pub inline fn bulk(comptime T: type, id: c.phpz_rsrc_id) *T {
     const table: *const [*]?*anyopaque = @ptrCast(@alignCast(localStorage()));
     return @ptrCast(@alignCast(table.*[@intCast(id - 1)].?));
 }

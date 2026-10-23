@@ -12,6 +12,9 @@ pub fn build(b: *std.Build) void {
 
     // PHP build options.
     const shared = b.option(bool, "shared", "Build a shared PHP extension instead of a built-in extension") orelse true;
+    const static_tsrmls_cache = b.option(bool, "static-tsrmls-cache", "Use static TSRM caches for ZTS builds") orelse true;
+    const tsrmls_cache_tcb_fast_path = b.option(bool, "tsrmls-cache-tcb-fast-path", "Enable direct TCB access to PHP's TSRM cache on supported Linux ZTS builds") orelse false;
+    const debug_leak_trace_frames = b.option(usize, "debug-leak-trace-frames", "Maximum stack frames in PHP debug memory leak reports") orelse 3;
     const php_include_dir = b.option([]const u8, "php-include-dir", "PHP include directory (main/, Zend/, TSRM/, ext/)") orelse "/usr/include/php";
     const php_lib_dir = b.option([]const u8, "php-lib-dir", "Windows only: required PHP SDK library directory containing php8*.lib");
     const windows_zts = b.option(bool, "windows-zts", "Windows only: link against the thread-safe PHP library") orelse false;
@@ -32,6 +35,9 @@ pub fn build(b: *std.Build) void {
         .windows_zts = windows_zts,
         .windows_debug = windows_debug,
         .shared = shared,
+        .static_tsrmls_cache = static_tsrmls_cache,
+        .tsrmls_cache_tcb_fast_path = tsrmls_cache_tcb_fast_path,
+        .debug_leak_trace_frames = debug_leak_trace_frames,
     });
 
     // Build the PHP extension library.
