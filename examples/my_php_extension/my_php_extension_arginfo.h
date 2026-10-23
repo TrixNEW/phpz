@@ -1,5 +1,5 @@
 /* This is a generated file, edit the .stub.php file instead.
- * Stub hash: b932b7e30cea25ab76af8d62505fdef7e58f211e */
+ * Stub hash: 3e60c23f99578de730cb50a8d1452a013792b689 */
 
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello, 0, 0, IS_VOID, 0)
 ZEND_END_ARG_INFO()
@@ -78,9 +78,20 @@ ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkStreamFailure
 	ZEND_ARG_INFO(0, destination)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_typedArgument, 0, 2, IS_MIXED, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_typedArgument, 0, 3, IS_MIXED, 0)
 	ZEND_ARG_TYPE_INFO(0, mode, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, single, _IS_BOOL, 0)
+	ZEND_ARG_TYPE_INFO(0, value, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_optionalTypedArgument, 0, 2, IS_MIXED, 0)
+	ZEND_ARG_TYPE_INFO(0, mode, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, single, _IS_BOOL, 0)
+	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, value, IS_MIXED, 0, "null")
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_checkArgumentDeclaration, 0, 1, _IS_BOOL, 0)
+	ZEND_ARG_TYPE_INFO(0, mode, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, value, IS_MIXED, 0, "null")
 ZEND_END_ARG_INFO()
 
@@ -349,7 +360,13 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_referenceArgument, 0, 4, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, mode, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, type, IS_STRING, 0)
-	ZEND_ARG_TYPE_INFO(0, optional, _IS_BOOL, 0)
+	ZEND_ARG_TYPE_INFO(0, single, _IS_BOOL, 0)
+	ZEND_ARG_TYPE_INFO(1, value, IS_MIXED, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_MyPHPExt_Test_optionalReferenceArgument, 0, 3, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, mode, IS_STRING, 0)
+	ZEND_ARG_TYPE_INFO(0, type, IS_STRING, 0)
 	ZEND_ARG_TYPE_INFO(0, single, _IS_BOOL, 0)
 	ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(1, value, IS_MIXED, 0, "null")
 ZEND_END_ARG_INFO()
@@ -528,6 +545,8 @@ ZEND_FUNCTION(MyPHPExt_Test_closeStream);
 ZEND_FUNCTION(MyPHPExt_Test_syncStream);
 ZEND_FUNCTION(MyPHPExt_Test_checkStreamFailures);
 ZEND_FUNCTION(MyPHPExt_Test_typedArgument);
+ZEND_FUNCTION(MyPHPExt_Test_optionalTypedArgument);
+ZEND_FUNCTION(MyPHPExt_Test_checkArgumentDeclaration);
 ZEND_FUNCTION(MyPHPExt_Test_checkStringArguments);
 ZEND_FUNCTION(MyPHPExt_Test_checkZvalStrings);
 ZEND_FUNCTION(MyPHPExt_Test_checkStringWriteFailure);
@@ -586,6 +605,7 @@ ZEND_FUNCTION(MyPHPExt_Test_guardResources);
 ZEND_FUNCTION(MyPHPExt_Test_superglobalsSnapshot);
 ZEND_FUNCTION(MyPHPExt_Test_mutateSuperglobals);
 ZEND_FUNCTION(MyPHPExt_Test_referenceArgument);
+ZEND_FUNCTION(MyPHPExt_Test_optionalReferenceArgument);
 ZEND_METHOD(MyPHPExt_ClosureCounter, __construct);
 ZEND_METHOD(MyPHPExt_ClosureCounter, __invoke);
 ZEND_METHOD(MyPHPExt_ClosureRef, __construct);
@@ -734,6 +754,16 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "typedArgument"), zif_MyPHPExt_Test_typedArgument, arginfo_MyPHPExt_Test_typedArgument, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "typedArgument"), zif_MyPHPExt_Test_typedArgument, arginfo_MyPHPExt_Test_typedArgument, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "optionalTypedArgument"), zif_MyPHPExt_Test_optionalTypedArgument, arginfo_MyPHPExt_Test_optionalTypedArgument, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "optionalTypedArgument"), zif_MyPHPExt_Test_optionalTypedArgument, arginfo_MyPHPExt_Test_optionalTypedArgument, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArgumentDeclaration"), zif_MyPHPExt_Test_checkArgumentDeclaration, arginfo_MyPHPExt_Test_checkArgumentDeclaration, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkArgumentDeclaration"), zif_MyPHPExt_Test_checkArgumentDeclaration, arginfo_MyPHPExt_Test_checkArgumentDeclaration, 0)
 #endif
 #if (PHP_VERSION_ID >= 80400)
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "checkStringArguments"), zif_MyPHPExt_Test_checkStringArguments, arginfo_MyPHPExt_Test_checkStringArguments, 0, NULL, NULL)
@@ -1024,6 +1054,11 @@ static const zend_function_entry ext_functions[] = {
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "referenceArgument"), zif_MyPHPExt_Test_referenceArgument, arginfo_MyPHPExt_Test_referenceArgument, 0, NULL, NULL)
 #else
 	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "referenceArgument"), zif_MyPHPExt_Test_referenceArgument, arginfo_MyPHPExt_Test_referenceArgument, 0)
+#endif
+#if (PHP_VERSION_ID >= 80400)
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "optionalReferenceArgument"), zif_MyPHPExt_Test_optionalReferenceArgument, arginfo_MyPHPExt_Test_optionalReferenceArgument, 0, NULL, NULL)
+#else
+	ZEND_RAW_FENTRY(ZEND_NS_NAME("MyPHPExt\\Test", "optionalReferenceArgument"), zif_MyPHPExt_Test_optionalReferenceArgument, arginfo_MyPHPExt_Test_optionalReferenceArgument, 0)
 #endif
 	ZEND_FE_END
 };

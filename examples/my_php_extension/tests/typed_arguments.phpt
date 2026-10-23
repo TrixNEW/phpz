@@ -4,8 +4,16 @@ Typed expectArg/expectArgs outputs, integer ranges, f32 narrowing, nullable/opti
 my_php_extension
 --FILE--
 <?php
-use function MyPHPExt\Test\typedArgument as parse;
+use function MyPHPExt\Test\typedArgument;
+use function MyPHPExt\Test\optionalTypedArgument;
 use function MyPHPExt\Test\checkStringArguments;
+
+function parse(string $mode, bool $single, ...$values): mixed {
+    if (str_starts_with($mode, 'optional-') || str_starts_with($mode, 'both-')) {
+        return optionalTypedArgument($mode, $single, ...$values);
+    }
+    return typedArgument($mode, $single, ...$values);
+}
 
 function same($expected, $actual): void {
     if (is_float($expected) && is_nan($expected) && is_float($actual) && is_nan($actual)) return;
@@ -39,6 +47,12 @@ $ranges = [
     'u64' => [0, PHP_INT_MAX], 'usize' => [0, PHP_INT_MAX],
 ];
 foreach ([true, false] as $single) {
+    try {
+        typedArgument('u8', $single);
+        throw new RuntimeException('Required argument was accepted as omitted');
+    } catch (ArgumentCountError $error) {
+        if (!str_contains($error->getMessage(), 'expects exactly 3 arguments, 2 given')) throw $error;
+    }
     foreach ($ranges as $type => [$min, $max]) {
         foreach ([$min, 0, 1, $max] as $value) same($value, parse($type, $single, $value));
         if ($min > PHP_INT_MIN) fails(ValueError::class, fn() => parse($type, $single, $min - 1));
@@ -109,7 +123,7 @@ foreach ([true, false] as $single) {
     }
     fclose($resource);
 }
-same(42, parse(value: 42, single: true, mode: 'u8'));
+same(42, typedArgument(value: 42, single: true, mode: 'u8'));
 echo "typed arguments passed\n";
 ?>
 --EXPECT--

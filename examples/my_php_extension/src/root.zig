@@ -19,6 +19,7 @@ const closures = @import("closures.zig");
 
 const thread_tests = @import("testing/threads.zig");
 const typed_arguments = @import("testing/typed_arguments.zig");
+const argument_declaration = @import("testing/argument_declaration.zig");
 const object_tests = @import("testing/objects.zig");
 const object_access = @import("testing/object_access.zig");
 const string_tests = @import("testing/strings.zig");
@@ -40,6 +41,7 @@ fn info(m: *phpz.ModuleEntry) void {
 
 comptime {
     phpz.namedFunctions(.{
+        .@"MyPHPExt\\Test\\checkArgumentDeclaration" = argument_declaration.checkArgumentDeclaration,
         .@"MyPHPExt\\Test\\readLastError" = error_tests.readLastError,
         .@"MyPHPExt\\Test\\checkExceptionBoundary" = exception_boundaries.checkExceptionBoundary,
         .@"MyPHPExt\\Test\\checkNativeTsrmThreads" = thread_tests.checkNativeTsrmThreads,
@@ -58,6 +60,7 @@ comptime {
         .@"MyPHPExt\\Test\\syncStream" = stream_tests.syncStream,
         .@"MyPHPExt\\Test\\checkStreamFailures" = stream_tests.checkStreamFailures,
         .@"MyPHPExt\\Test\\typedArgument" = typed_arguments.typedArgument,
+        .@"MyPHPExt\\Test\\optionalTypedArgument" = typed_arguments.optionalTypedArgument,
         .@"MyPHPExt\\Test\\checkStringArguments" = typed_arguments.checkStringArguments,
         .@"MyPHPExt\\Test\\checkZvalStrings" = typed_arguments.checkZvalStrings,
         .@"MyPHPExt\\Test\\checkStringWriteFailure" = typed_arguments.checkStringWriteFailure,
@@ -78,6 +81,7 @@ comptime {
         .@"MyPHPExt\\Test\\superglobalsSnapshot" = superglobals.superglobalsSnapshot,
         .@"MyPHPExt\\Test\\mutateSuperglobals" = superglobals.mutateSuperglobals,
         .@"MyPHPExt\\Test\\referenceArgument" = reference_arguments.referenceArgument,
+        .@"MyPHPExt\\Test\\optionalReferenceArgument" = reference_arguments.optionalReferenceArgument,
         .@"MyPHPExt\\Test\\collectArguments" = named_arguments.collectArguments,
         .@"MyPHPExt\\Test\\checkedNamedArguments" = named_arguments.checkedNamedArguments,
         .@"MyPHPExt\\Test\\collectReferenceArguments" = named_arguments.collectAll,

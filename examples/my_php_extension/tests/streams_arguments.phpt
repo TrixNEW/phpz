@@ -4,11 +4,19 @@ Stream argument conversion, borrowing, nullable and optional parameters
 my_php_extension
 --FILE--
 <?php
-use function MyPHPExt\Test\typedArgument as parse;
+use function MyPHPExt\Test\typedArgument;
+use function MyPHPExt\Test\optionalTypedArgument;
 use function MyPHPExt\Test\readStream;
 use function MyPHPExt\Test\nullableStream;
 use function MyPHPExt\Test\optionalStream;
 use function MyPHPExt\Test\optionalNullableStream;
+
+function parse(string $mode, bool $single, ...$values): mixed {
+    if (str_starts_with($mode, 'optional-') || str_starts_with($mode, 'both-')) {
+        return optionalTypedArgument($mode, $single, ...$values);
+    }
+    return typedArgument($mode, $single, ...$values);
+}
 
 function same($expected, $actual) {
     if ($expected !== $actual) throw new RuntimeException('Unexpected stream argument');

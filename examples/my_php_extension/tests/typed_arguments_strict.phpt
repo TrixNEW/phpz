@@ -6,7 +6,15 @@ my_php_extension
 <?php
 declare(strict_types=1);
 
-use function MyPHPExt\Test\typedArgument as parse;
+use function MyPHPExt\Test\typedArgument;
+use function MyPHPExt\Test\optionalTypedArgument;
+
+function parse(string $mode, bool $single, ...$values): mixed {
+    if (str_starts_with($mode, 'optional-') || str_starts_with($mode, 'both-')) {
+        return optionalTypedArgument($mode, $single, ...$values);
+    }
+    return typedArgument($mode, $single, ...$values);
+}
 
 function same($expected, $actual): void {
     if ($expected !== $actual) throw new RuntimeException('Unexpected parsed value ' . var_export($actual, true));

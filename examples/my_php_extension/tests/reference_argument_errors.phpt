@@ -10,7 +10,7 @@ function rejected(string $mode, string $type, bool $single, mixed $input): void 
     $value = $input;
     $alias =& $value;
     try {
-        referenceArgument($mode, $type, false, $single, $value);
+        referenceArgument($mode, $type, $single, $value);
         echo "ERROR: invalid value accepted\n";
     } catch (TypeError $error) {
         echo $error::class, ': ', $error->getMessage(), "\n";
@@ -42,7 +42,7 @@ foreach ([false, true] as $single) {
         rejected('value', $type, $single, $input);
     }
     try {
-        referenceArgument('value', 'int', false, $single);
+        referenceArgument('value', 'int', $single);
         echo "ERROR: missing argument accepted\n";
     } catch (ArgumentCountError|ValueError $error) {
         echo $error::class, ': ', $error->getMessage(), "\n";
@@ -51,31 +51,31 @@ foreach ([false, true] as $single) {
 ?>
 --EXPECT--
 reference
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type int, string given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type int, string given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type int, string given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type int, string given
 zval
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type int, string given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type int, string given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type int, string given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type int, string given
 value
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type int, string given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type int, string given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type int, string given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type int, string given
 expectArgs
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type null, int given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type float, int given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type string, bool given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type bool, int given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type array, object given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type object, array given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type resource, null given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type callable, string given
-ArgumentCountError: MyPHPExt\Test\referenceArgument() expects exactly 5 arguments, 4 given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type null, int given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type float, int given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type string, bool given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type bool, int given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type array, object given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type object, array given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type resource, null given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type callable, string given
+ArgumentCountError: MyPHPExt\Test\referenceArgument() expects exactly 4 arguments, 3 given
 expectArg
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type null, int given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type float, int given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type string, bool given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type bool, int given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type array, object given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type object, array given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type resource, null given
-TypeError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be of type callable, string given
-ValueError: MyPHPExt\Test\referenceArgument(): Argument #5 ($value) must be provided
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type null, int given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type float, int given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type string, bool given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type bool, int given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type array, object given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type object, array given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type resource, null given
+TypeError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be of type callable, string given
+ValueError: MyPHPExt\Test\referenceArgument(): Argument #4 ($value) must be provided

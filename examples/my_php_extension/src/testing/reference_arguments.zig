@@ -2,29 +2,32 @@ const std = @import("std");
 const phpz = @import("phpz");
 const Kind = phpz.CallFrame.ExpectArgKind;
 
-/// PHP: MyPHPExt\Test\referenceArgument(string $mode, string $type, bool $optional, bool $single, mixed &$value = null): string
 pub fn referenceArgument(ctx: phpz.Ctx) ![]const u8 {
-    try ctx.call.expectArgCount(4, 5);
+    return dispatch(ctx, false);
+}
+
+pub fn optionalReferenceArgument(ctx: phpz.Ctx) ![]const u8 {
+    return dispatch(ctx, true);
+}
+
+fn dispatch(ctx: phpz.Ctx, comptime optional: bool) ![]const u8 {
+    try ctx.call.expectNoExtraNamedArgs();
+    try ctx.call.expectArgCount(3, 4);
     const mode = try ctx.call.expectArg(1, .{ .string = .{} }, {});
     const type_name = try ctx.call.expectArg(2, .{ .string = .{} }, {});
-    const optional = try ctx.call.expectArg(3, .{ .bool = .{} }, {});
-    const single = try ctx.call.expectArg(4, .{ .bool = .{} }, {});
+    const single = try ctx.call.expectArg(3, .{ .bool = .{} }, {});
 
-    inline for (.{ false, true }) |is_optional| {
-        if (optional == is_optional) {
-            inline for (.{ "reference", "zval", "value" }) |result| {
-                if (std.mem.eql(u8, mode, result)) {
-                    inline for ([_]?Kind{ null, .null, .int, .float, .string, .bool, .array, .object, .resource, .callable }) |kind| {
-                        if (std.mem.eql(u8, type_name, if (kind) |k| @tagName(k) else "any")) {
-                            const spec: Kind.Spec = comptime spec: {
-                                var spec: Kind.Spec = .{ .reference = .{ .optional = is_optional, .kind = kind } };
-                                if (std.mem.eql(u8, result, "zval")) spec.reference.as = .zval;
-                                if (std.mem.eql(u8, result, "value")) spec.reference.as = .value;
-                                break :spec spec;
-                            };
-                            return inspect(ctx, spec, single);
-                        }
-                    }
+    inline for (.{ "reference", "zval", "value" }) |result| {
+        if (std.mem.eql(u8, mode, result)) {
+            inline for ([_]?Kind{ null, .null, .int, .float, .string, .bool, .array, .object, .resource, .callable }) |kind| {
+                if (std.mem.eql(u8, type_name, if (kind) |k| @tagName(k) else "any")) {
+                    const spec: Kind.Spec = comptime spec: {
+                        var spec: Kind.Spec = .{ .reference = .{ .optional = optional, .kind = kind } };
+                        if (std.mem.eql(u8, result, "zval")) spec.reference.as = .zval;
+                        if (std.mem.eql(u8, result, "value")) spec.reference.as = .value;
+                        break :spec spec;
+                    };
+                    return inspect(ctx, spec, single);
                 }
             }
         }
@@ -34,16 +37,15 @@ pub fn referenceArgument(ctx: phpz.Ctx) ![]const u8 {
 
 fn inspect(ctx: phpz.Ctx, comptime spec: Kind.Spec, single: bool) ![]const u8 {
     const parsed = if (single)
-        try ctx.call.expectArg(5, spec, {})
+        try ctx.call.expectArg(4, spec, {})
     else result: {
         const args = try ctx.call.expectArgs(&.{
             .{ .string = .{} },
             .{ .string = .{} },
             .{ .bool = .{} },
-            .{ .bool = .{} },
             spec,
         }, {});
-        break :result args[4];
+        break :result args[3];
     };
     const Expected = switch (spec.reference.as) {
         .reference => *phpz.zend.Reference,
@@ -56,7 +58,7 @@ fn inspect(ctx: phpz.Ctx, comptime spec: Kind.Spec, single: bool) ![]const u8 {
     }
     const value = if (comptime spec.reference.optional) parsed orelse return "omitted" else parsed;
 
-    const outer = ctx.call.arg(5);
+    const outer = ctx.call.arg(4);
     const reference = phpz.Zval.raw.asUnchecked(outer, .reference);
     const inner: *phpz.Zval = switch (comptime spec.reference.as) {
         .reference => blk: {

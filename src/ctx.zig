@@ -1,10 +1,12 @@
 //! PHP function/method call context.
 const std = @import("std");
+const builtin = @import("builtin");
 
 const c = @import("root.zig").c;
 const stub = @import("stub.zig");
 const exception = @import("exception.zig");
 const argument = @import("argument.zig");
+const closure = @import("closure.zig");
 const resource_guard = @import("guard.zig");
 const GuardScope = resource_guard.Scope;
 const Guard = resource_guard.Guard;
@@ -233,8 +235,6 @@ pub const CallFrame = opaque {
         runtime: ExpectArgsRuntime(specs),
     ) exception.Error!argument.ExpectArgResults(specs) {
         @setEvalBranchQuota(comptime stub.declarationQuota(specs.len));
-        const has_variadic = comptime specs.len != 0 and specs[specs.len - 1] == .variadic;
-        if (comptime !has_variadic) try self.expectNoExtraNamedArgs();
         const min = comptime min: {
             var count: u32 = 0;
             var seen_optional = false;
@@ -256,6 +256,11 @@ pub const CallFrame = opaque {
             }
             break :min count;
         };
+
+        const has_variadic = comptime specs.len != 0 and specs[specs.len - 1] == .variadic;
+
+        if (comptime builtin.mode == .debug) self.assertArgsDeclaration(min, @intCast(specs.len - @intFromBool(has_variadic)), has_variadic);
+        if (comptime !has_variadic) try self.expectNoExtraNamedArgs();
 
         const max: u32 = if (comptime has_variadic) std.math.maxInt(u32) else @intCast(specs.len);
 
@@ -279,6 +284,29 @@ pub const CallFrame = opaque {
                 try argument.extractValue(.{ .position = n }, self.arg(n), spec, arg_runtime);
         }
         return result;
+    }
+
+    fn assertArgsDeclaration(self: *CallFrame, required: u32, fixed: u32, variadic: bool) void {
+        const func = self.function() orelse return;
+        if (closure.usesGenericArgInfo(func)) return;
+        if (func.requiredParamCount() == required and
+            func.fixedParamCount() == fixed and func.isVariadic() == variadic) return;
+
+        const class_scope = func.scope();
+        std.debug.panic(
+            "{s}{s}{s}(): expectArgs declaration mismatch: specs require {d}, fixed {d}, variadic {}; declaration requires {d}, fixed {d}, variadic {}",
+            .{
+                if (class_scope) |class| class.name() else "",
+                if (class_scope != null) "::" else "",
+                func.name(),
+                required,
+                fixed,
+                variadic,
+                func.requiredParamCount(),
+                func.fixedParamCount(),
+                func.isVariadic(),
+            },
+        );
     }
 
     pub const ExpectArgKind = argument.ExpectArgKind;

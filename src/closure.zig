@@ -5,6 +5,7 @@ const c = @import("c.zig").c;
 const functions = @import("function.zig");
 const Handler = functions.Handler;
 const String = @import("zend/string.zig").String;
+const Function = @import("zend/function.zig").Function;
 const Zval = @import("zval.zig").Zval;
 
 const handler_arginfo = [_]c.zend_internal_arg_info{
@@ -15,6 +16,12 @@ const handler_arginfo = [_]c.zend_internal_arg_info{
         .default_value = null,
     },
 };
+
+/// Identify the generic argument declaration used by createFromHandler/FromFn.
+pub fn usesGenericArgInfo(function: *Function) bool {
+    return function.kind() == .internal and
+        function.ptr().internal_function.arg_info == &handler_arginfo[1];
+}
 
 /// Create a Closure from a typed Zig function, optionally with a leading Ctx or
 /// GuardCtx. The handler parses PHP parameters and writes non-void Zig results;

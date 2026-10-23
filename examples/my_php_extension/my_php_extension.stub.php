@@ -210,7 +210,9 @@ namespace MyPHPExt\Test {
      * @param resource $destination
      */
     function checkStreamFailures($source, $destination): void {}
-    function typedArgument(string $mode, bool $single, mixed $value = null): mixed {}
+    function typedArgument(string $mode, bool $single, mixed $value): mixed {}
+    function optionalTypedArgument(string $mode, bool $single, mixed $value = null): mixed {}
+    function checkArgumentDeclaration(string $mode, mixed $value = null): bool {}
     function checkStringArguments(string $value): bool {}
     function checkZvalStrings(string $value, object $fixture): string {}
     function checkStringWriteFailure(object $fixture, string $api, string $exception): void {}
@@ -319,5 +321,6 @@ namespace MyPHPExt\Test {
 
     function mutateSuperglobals(): void {}
 
-    function referenceArgument(string $mode, string $type, bool $optional, bool $single, mixed &$value = null): string {}
+    function referenceArgument(string $mode, string $type, bool $single, mixed &$value): string {}
+    function optionalReferenceArgument(string $mode, string $type, bool $single, mixed &$value = null): string {}
 }

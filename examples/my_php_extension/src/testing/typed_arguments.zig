@@ -7,15 +7,21 @@ const Spec = CallFrame.ExpectArgKind.Spec;
 /// Exercise the same spec through both the single and tuple parsing APIs.
 /// The PHP value is deliberately mixed so the wrapper owns all type checks.
 pub fn typedArgument(ctx: phpz.Ctx) !void {
+    return dispatch(ctx, false);
+}
+
+pub fn optionalTypedArgument(ctx: phpz.Ctx) !void {
+    return dispatch(ctx, true);
+}
+
+fn dispatch(ctx: phpz.Ctx, comptime optional: bool) !void {
     try ctx.call.expectNoExtraNamedArgs();
     try ctx.call.expectArgCount(2, 3);
     const mode = try ctx.call.expectArg(1, .{ .string = .{} }, {});
     const single = try ctx.call.expectArg(2, .{ .bool = .{} }, {});
 
-    inline for (.{ .required, .nullable, .optional, .both }) |wrap| {
-        const prefix = if (wrap == .required) "" else @tagName(wrap) ++ "-";
-        const optional = wrap == .optional or wrap == .both;
-        const nullable = wrap == .nullable or wrap == .both;
+    inline for (.{ false, true }) |nullable| {
+        const prefix = if (optional) (if (nullable) "both-" else "optional-") else (if (nullable) "nullable-" else "");
         if (std.mem.eql(u8, mode, prefix ++ "stream")) {
             return parse(ctx, single, .{ .resource = .{ .as = .stream, .optional = optional, .nullable = nullable } });
         }
@@ -45,7 +51,7 @@ pub fn typedArgument(ctx: phpz.Ctx) !void {
 
 fn parse(ctx: phpz.Ctx, single: bool, comptime spec: Spec) !void {
     const optional = comptime spec.isOptional();
-    try ctx.call.expectArgCount(if (optional) 2 else 3, 3);
+    if (single) try ctx.call.expectArgCount(if (optional) 2 else 3, 3);
     const resource = if (ctx.call.argCount() == 3) phpz.Zval.raw.as(ctx.call.arg(3), .resource) catch null else null;
     const refcount = if (resource) |res| res.refcount() else 0;
     const result = if (single)

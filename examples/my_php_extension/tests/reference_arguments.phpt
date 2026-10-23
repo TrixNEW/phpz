@@ -5,6 +5,7 @@ my_php_extension
 --FILE--
 <?php
 use function MyPHPExt\Test\referenceArgument;
+use function MyPHPExt\Test\optionalReferenceArgument;
 
 function check($actual, $expected): void {
     if ($actual !== $expected) {
@@ -40,7 +41,10 @@ foreach (['reference', 'zval', 'value'] as $mode) {
             foreach ($cases as [$type, $input, $kind]) {
                 $value = $input;
                 $alias =& $value;
-                check(referenceArgument($mode, $type, $optional, $single, $value), $kind);
+                $actual = $optional
+                    ? optionalReferenceArgument($mode, $type, $single, $value)
+                    : referenceArgument($mode, $type, $single, $value);
+                check($actual, $kind);
                 $expected = is_int($input) ? $input + 1 : $input;
                 check($value, $expected);
                 check($alias, $expected);
@@ -48,7 +52,7 @@ foreach (['reference', 'zval', 'value'] as $mode) {
             }
         }
         foreach ($types as $type) {
-            check(referenceArgument($mode, $type, true, $single), 'omitted');
+            check(optionalReferenceArgument($mode, $type, $single), 'omitted');
         }
     }
     echo "$mode: passed\n";
