@@ -58,6 +58,49 @@ extension patterns that tend to break in real projects:
   while `phpz.globals.executor().superglobalMut(.GET)` prepares the userland
   `$_GET` slot for mutation.
 
+## Variadic arguments
+
+A final `phpz.Variadic` parameter collects remaining positional arguments and
+extra named arguments. `collectArguments()` demonstrates this after optional
+fixed parameters; `collectReferenceArguments()` preserves reference containers.
+
+```zig
+fn sum(base: i64, rest: phpz.Variadic) !i64 {
+    var total = base;
+    var it = rest.iterator();
+    while (it.next()) |entry| {
+        total += try entry.expect(.{ .int = .{} }, {});
+    }
+    return total;
+}
+```
+
+The PHP stub must declare the variadic tail, for example
+`function sum(int $base, mixed ...$values): int {}`. `entry.name()` is null for
+positional arguments and holds the original name for named extras;
+`entry.identifier` identifies either a 1-based argument position or a borrowed name.
+`entry.value` is a borrowed `*Zval` for direct mixed-value access.
+`entry.expect(spec, runtime)` accepts the existing single-argument specs,
+including nullable values, unions, references, object class checks and callable
+output storage. An element cannot be optional or itself variadic.
+
+Manual parsing uses a final `.{ .variadic = .{} }` in `ctx.call.expectArgs()`.
+Both manual parsing and typed handlers collect positional and named extras.
+Call `try rest.check(.named_only)` or `try rest.check(.positional_only)` before
+processing values to reject disallowed arguments with `ArgumentCountError`.
+`rest.check(.both)` permits both, as does omitting the check. The check only
+constrains the tail: named arguments resolved to fixed parameters are unaffected.
+All modes accept an empty tail. Fixed parameters are parsed before the explicit
+check; elements are not parsed by it, and disallowed arguments are not filtered.
+
+Iteration visits positional arguments first, followed by named extras in table
+order. Element parsing is lazy and uses the same coercion and `strict_types`
+rules as `expectArg()`; stopping early leaves later elements unchecked.
+Views borrow the current call's storage. Do not retain them beyond the handler
+or structurally modify the named table. Copy/addref values that must outlive
+the call. Parsing can replace a slot during coercion, so previously borrowed
+views of that value must no longer be used after such a replacement.
+
 ## Retaining callables
 
 `MyPHPExt\Test\GcNode` demonstrates keeping a callable in Zig backing after its

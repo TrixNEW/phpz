@@ -1,10 +1,10 @@
 const std = @import("std");
 
 const abi = @import("abi.zig");
+const argument = @import("argument.zig");
 const c = @import("root.zig").c;
 const Ctx = @import("ctx.zig").Ctx;
 const GuardCtx = @import("ctx.zig").GuardCtx;
-const CallFrame = @import("ctx.zig").CallFrame;
 const exception = @import("exception.zig");
 const guard = @import("guard.zig");
 const stub = @import("stub.zig");
@@ -165,12 +165,14 @@ pub fn functions(comptime T: type, comptime options: struct { namespace: []const
 /// `functions` when all extension functions can be bound together.
 ///
 /// The optional Ctx or GuardCtx must be first. Other parameters are extracted
-/// through CallFrame.expectArgs. Non-void results are written to PHP's result zval;
+/// through CallFrame.expectArgs. A final Variadic collects positional and named
+/// extras; call check() to restrict them and Entry.expect() to parse elements.
+/// Non-void results are written to PHP's result zval;
 /// void/!void leaves it unchanged, allowing the function to set it manually.
 /// Use a context-only signature for expectArgs specifications that a Zig type
 /// cannot express.
 /// A `*Stream` parameter borrows a PHP stream; keep its resource alive and open.
-/// `?T` permits omission; `CallFrame.Nullable(T)` permits PHP null.
+/// `?T` permits omission; `phpz.Nullable(T)` permits PHP null.
 /// `[:0]const u8` borrows a NUL-terminated string slice, preserving embedded NULs.
 /// String slice returns are copied using their full length.
 ///
@@ -244,32 +246,33 @@ pub fn method(comptime class_name: [:0]const u8, comptime func_name: [:0]const u
 fn NullablePayloadType(comptime T: type) ?type {
     if (@typeInfo(T) != .@"union" or !@hasField(T, "value")) return null;
     const Payload = @FieldType(T, "value");
-    return if (T == CallFrame.Nullable(Payload)) Payload else null;
+    return if (T == argument.Nullable(Payload)) Payload else null;
 }
 
-fn mixedKinds(comptime T: type) ?[]const CallFrame.ExpectArgKind {
+fn mixedKinds(comptime T: type) ?[]const argument.ExpectArgKind {
     comptime {
         if (@typeInfo(T) != .@"union") return null;
         const info = @typeInfo(T).@"union";
         if (info.tag_type == null or info.field_names.len < 2) return null;
-        var kinds: [info.field_names.len]CallFrame.ExpectArgKind = undefined;
+        var kinds: [info.field_names.len]argument.ExpectArgKind = undefined;
         for (info.field_names, 0..) |name, i| {
-            if (!@hasField(CallFrame.ExpectArgKind, name)) return null;
-            const kind = @field(CallFrame.ExpectArgKind, name);
-            if (kind == .mixed or kind == .reference or kind == .callable) return null;
+            if (!@hasField(argument.ExpectArgKind, name)) return null;
+            const kind = @field(argument.ExpectArgKind, name);
+            if (kind == .mixed or kind == .reference or kind == .callable or kind == .variadic) return null;
             kinds[i] = kind;
         }
         const result = kinds;
-        return if (T == CallFrame.Mixed(&result)) &result else null;
+        return if (T == argument.Mixed(&result)) &result else null;
     }
 }
 
-fn specFor(comptime T: type) CallFrame.ExpectArgKind.Spec {
+fn specFor(comptime T: type) argument.ExpectArgKind.Spec {
+    if (T == argument.Variadic) return .{ .variadic = .{} };
     const optional = @typeInfo(T) == .optional;
     const Inner = if (optional) @typeInfo(T).optional.child else T;
     const nullable = NullablePayloadType(Inner) != null;
     const Base = NullablePayloadType(Inner) orelse Inner;
-    const Spec = CallFrame.ExpectArgKind.Spec;
+    const Spec = argument.ExpectArgKind.Spec;
 
     inline for (.{ i8, i16, i32, i64, isize, u8, u16, u32, u64, usize }) |Int| {
         if (Base == Int) {
@@ -342,7 +345,7 @@ pub fn invoke(comptime func: anytype, ctx: anytype, receiver: anytype) anyerror!
     if (comptime has_context) params[context_idx] = ctx;
     comptime var callable_count = 0;
     const specs = comptime blk: {
-        var arg_specs: [php_params_count]CallFrame.ExpectArgKind.Spec = undefined;
+        var arg_specs: [php_params_count]argument.ExpectArgKind.Spec = undefined;
         for (0..php_params_count) |i| {
             arg_specs[i] = specFor(param_types[php_params_offset + i].?);
             if (arg_specs[i] == .callable) callable_count += 1;
@@ -353,7 +356,7 @@ pub fn invoke(comptime func: anytype, ctx: anytype, receiver: anytype) anyerror!
     if (comptime php_params_count == 0) {
         if (comptime !has_context) try ctx.call.expectNoArgs();
     } else {
-        var runtime: CallFrame.ExpectArgsRuntime(&specs) = undefined;
+        var runtime: argument.ExpectArgsRuntime(&specs) = undefined;
         if (comptime @TypeOf(runtime) != void) {
             comptime var callable_idx = 0;
             inline for (specs, 0..) |spec, i| {

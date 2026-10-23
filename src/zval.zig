@@ -179,6 +179,12 @@ pub const Zval = opaque {
         return raw.getTypeName(self.ptr());
     }
 
+    /// Get the diagnostic value name as a borrowed null-terminated string.
+    /// Booleans report "true" or "false" when supported; otherwise falls back to getTypeName().
+    pub inline fn getValueName(self: *Zval) [*:0]const u8 {
+        return raw.getValueName(self.ptr());
+    }
+
     /// Check if this zval is of a specific type.
     ///
     /// This is the preferred way to check zval types before conversion.
@@ -447,7 +453,7 @@ pub const Zval = opaque {
         ///
         /// Ownership: borrowed static/runtime string pointer.
         ///
-        /// Returns a human-readable type name like "integer", "string", "array", etc.
+        /// Returns a human-readable type name like "int", "string", "array", etc.
         /// Useful for error messages.
         ///
         /// Parameters:
@@ -463,6 +469,13 @@ pub const Zval = opaque {
         /// ```
         pub fn getTypeName(zv: *c.zval) [*:0]const u8 {
             return c.zend_zval_type_name(zv);
+        }
+
+        /// Raw-pointer equivalent of `Zval.getValueName`; dereferences PHP references.
+        /// Ownership: borrowed static/runtime string pointer; do not release it.
+        pub fn getValueName(zv: *c.zval) [*:0]const u8 {
+            if (comptime @hasDecl(c, "zend_zval_value_name")) return c.zend_zval_value_name(zv);
+            return raw.getTypeName(zv);
         }
 
         /// Raw-pointer equivalent of `Zval.kind`; strings always report `.string`.

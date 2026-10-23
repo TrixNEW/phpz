@@ -19,6 +19,7 @@ const handler_arginfo = [_]c.zend_internal_arg_info{
 /// Create a Closure from a typed Zig function, optionally with a leading Ctx or
 /// GuardCtx. The handler parses PHP parameters and writes non-void Zig results;
 /// void/!void preserves a manually set result.
+/// A final Variadic parameter collects positional and extra named arguments.
 /// Uses phpz.function's error and bailout handling.
 /// See createFromHandler for the closure's signature and creation constraints.
 pub fn createFromFn(comptime func: anytype, destination: *Zval) void {
@@ -28,7 +29,8 @@ pub fn createFromFn(comptime func: anytype, destination: *Zval) void {
 
 /// Create an unbound Closure from a zif_handler without registering a PHP function.
 /// Declares by-value variadic arguments and no return type; the handler parses arguments.
-/// Read extra named arguments with CallFrame.extraNamedArgs(); expectArgs() rejects them.
+/// Read extra named arguments with CallFrame.extraNamedArgs() or a final
+/// .variadic expectArgs() spec. expectArgs() otherwise rejects them.
 /// The handler must remain valid for the closure's lifetime.
 /// Creation may trigger a Zend bailout, which must terminate the request.
 pub fn createFromHandler(handler: *const Handler, destination: *Zval) void {

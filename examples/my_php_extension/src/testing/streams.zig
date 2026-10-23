@@ -162,7 +162,7 @@ pub fn readStream(resource: *Stream, len: usize) !*phpz.zend.String {
     return resource.readToStr(len);
 }
 
-pub fn nullableStream(resource: phpz.CallFrame.Nullable(*Stream)) []const u8 {
+pub fn nullableStream(resource: phpz.Nullable(*Stream)) []const u8 {
     return switch (resource) {
         .null => "null",
         .value => "stream",
@@ -173,7 +173,7 @@ pub fn optionalStream(resource: ?*Stream) []const u8 {
     return if (resource != null) "stream" else "omitted";
 }
 
-pub fn optionalNullableStream(resource: ?phpz.CallFrame.Nullable(*Stream)) []const u8 {
+pub fn optionalNullableStream(resource: ?phpz.Nullable(*Stream)) []const u8 {
     return nullableStream(resource orelse return "omitted");
 }
 

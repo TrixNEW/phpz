@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 
 const abi = @import("abi.zig");
 const c = @import("c.zig").c;
+const CallFrame = @import("ctx.zig").CallFrame;
 const exception_helper = @import("exception.zig");
 const SapiGlobals = @import("sapi.zig").Globals;
 const tsrm = @import("tsrm.zig");
@@ -143,6 +144,14 @@ pub const ExecutorGlobals = opaque {
 
     pub inline fn ptr(self: *ExecutorGlobals) *c.zend_executor_globals {
         return @ptrCast(@alignCast(self));
+    }
+
+    /// Return the current call frame, or null when no execution frame is active.
+    /// Ownership: borrowed frame owned by Zend; only valid while the frame exists.
+    pub inline fn currentCallFrame(self: *ExecutorGlobals) ?*CallFrame {
+        const frame = self.ptr().current_execute_data;
+        if (frame == null) return null;
+        return CallFrame.from(frame);
     }
 
     pub fn exitStatus(self: *ExecutorGlobals) exception_helper.ExitStatus {

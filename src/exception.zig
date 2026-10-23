@@ -28,6 +28,13 @@ pub fn argumentTypeError(arg_num: u32, comptime format: [:0]const u8, args: anyt
     return pending() orelse error.PhpException;
 }
 
+/// Report a parameter type error using Zend's message (1-based arg_num).
+pub fn wrongParameterType(arg_num: u32, expected: c.zend_expected_type, zv: *c.zval) Error {
+    @branchHint(.cold);
+    c.zend_wrong_parameter_type_error(arg_num, expected, zv);
+    return pending() orelse error.PhpException;
+}
+
 /// Return an argument value error
 pub fn argumentValueError(arg_num: u32, comptime format: [:0]const u8, args: anytype) Error {
     @branchHint(.cold);

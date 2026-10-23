@@ -41,8 +41,10 @@ pub const namedFunctions = @import("function.zig").namedFunctions;
 
 pub const Ctx = @import("ctx.zig").Ctx;
 pub const CallFrame = @import("ctx.zig").CallFrame;
-pub const Nullable = CallFrame.Nullable;
-pub const Mixed = CallFrame.Mixed;
+pub const Nullable = @import("argument.zig").Nullable;
+pub const Mixed = @import("argument.zig").Mixed;
+pub const Variadic = @import("argument.zig").Variadic;
+pub const ArgIdentifier = @import("argument.zig").Identifier;
 pub const GuardCtx = @import("ctx.zig").GuardCtx;
 pub const Zval = @import("zval.zig").Zval;
 pub const Guard = @import("guard.zig").Guard;

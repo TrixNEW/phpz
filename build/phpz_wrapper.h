@@ -1,6 +1,15 @@
 #ifndef PHPZ_WRAPPER_H
 #define PHPZ_WRAPPER_H
 
+/* Use the active PHP headers as the source of ZPP diagnostic wording. */
+static zend_always_inline const char *phpz_expected_type_description(zend_expected_type expected) {
+    static const char *const descriptions[] = {
+        Z_EXPECTED_TYPES(Z_EXPECTED_TYPE_STR)
+    };
+    ZEND_ASSERT((unsigned int) expected < Z_EXPECTED_LAST);
+    return descriptions[expected];
+}
+
 static zend_always_inline php_stream *phpz_stream_open(const char *path, const char *mode, int options) {
     return php_stream_open_wrapper(path, mode, options, NULL);
 }

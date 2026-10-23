@@ -1,14 +1,16 @@
 const std = @import("std");
+
 const exception = @import("../exception.zig");
-const stub = @import("../stub.zig");
 const phpz = @import("../root.zig");
 const c = phpz.c;
 const globals = phpz.globals;
+const stub = @import("../stub.zig");
 const Zval = @import("../zval.zig").Zval;
+const Array = @import("array.zig").Array;
 const bailout = @import("bailout.zig");
 const ClassEntry = @import("class_entry.zig").ClassEntry;
 const Object = @import("object.zig").Object;
-const Array = @import("array.zig").Array;
+const String = @import("string.zig").String;
 
 pub const Function = opaque {
     pub const Error = exception.Error;
@@ -83,6 +85,36 @@ pub const Function = opaque {
         return fname.*.val()[0..fname.*.len :0];
     }
 
+    /// Get the number of fixed parameters, including optional parameters.
+    /// Excludes the variadic parameter; this is not the number of supplied arguments.
+    pub fn fixedParamCount(self: *Function) u32 {
+        return self.ptr().common.num_args;
+    }
+
+    /// Get the number of required parameters in the function declaration.
+    pub fn requiredParamCount(self: *Function) u32 {
+        return self.ptr().common.required_num_args;
+    }
+
+    /// Return whether the function declares a variadic parameter.
+    pub fn isVariadic(self: *Function) bool {
+        return self.ptr().common.fn_flags & c.ZEND_ACC_VARIADIC != 0;
+    }
+
+    /// Get the function's class scope, or null for an unscoped function.
+    /// Ownership: borrowed class entry owned by Zend.
+    pub fn scope(self: *Function) ?*ClassEntry {
+        const class = self.ptr().common.scope orelse return null;
+        return ClassEntry.from(class);
+    }
+
+    /// Get the currently executing function's name, including Class::method.
+    /// PHP must be executing.
+    /// Ownership: caller owns one string reference; call release() when done.
+    pub fn activeName() *String {
+        return .from(c.get_active_function_or_method_name());
+    }
+
     pub const ClosureError = error{ InvalidClosureFunction, InvalidClosureBinding };
 
     /// Create a native PHP Closure, preserving the function's signature and static variables.
@@ -100,17 +132,17 @@ pub const Function = opaque {
             flags & (c.ZEND_ACC_ABSTRACT | c.ZEND_ACC_CLOSURE | c.ZEND_ACC_CALL_VIA_TRAMPOLINE) != 0)
             return error.InvalidClosureFunction;
 
-        const scope = func.common.scope;
-        var called_scope = if (options.called_scope) |ce| ce.ptr() else scope;
+        const declaration_scope = func.common.scope;
+        var called_scope = if (options.called_scope) |ce| ce.ptr() else declaration_scope;
         switch (self.role()) {
             .function => if (options.object != null or options.called_scope != null) return error.InvalidClosureBinding,
             .static_method => {
                 if (options.object != null) return error.InvalidClosureBinding;
-                if (!c.instanceof_function(called_scope, scope)) return error.InvalidClosureBinding;
+                if (!c.instanceof_function(called_scope, declaration_scope)) return error.InvalidClosureBinding;
             },
             .instance_method => {
                 const object = options.object orelse return error.InvalidClosureBinding;
-                if (!object.instanceof(.from(scope.?))) return error.InvalidClosureBinding;
+                if (!object.instanceof(.from(declaration_scope.?))) return error.InvalidClosureBinding;
                 if (options.called_scope) |ce| {
                     if (ce != object.class()) return error.InvalidClosureBinding;
                 }
@@ -119,7 +151,7 @@ pub const Function = opaque {
         }
 
         var object: ?c.zval = if (options.object) |obj| Zval.raw.init(.object, obj) else null;
-        c.zend_create_fake_closure(destination.ptr(), func, scope, called_scope, if (object) |*value| value else null);
+        c.zend_create_fake_closure(destination.ptr(), func, declaration_scope, called_scope, if (object) |*value| value else null);
     }
 
     /// Call as a global function (no object, no scope).
@@ -177,7 +209,7 @@ pub const Function = opaque {
     inline fn invoke(
         self: *Function,
         obj: ?*c.zend_object,
-        scope: ?*c.zend_class_entry,
+        called_scope: ?*c.zend_class_entry,
         retval: ?*c.zval,
         params: anytype,
         named_params: ?*Array,
@@ -189,11 +221,11 @@ pub const Function = opaque {
         const n = info.@"struct".field_types.len;
         @setEvalBranchQuota(comptime stub.declarationQuota(n));
         switch (n) {
-            0 => c.zend_call_known_function(self.ptr(), obj, scope, retval, 0, null, if (named_params) |args| args.ptr() else null),
+            0 => c.zend_call_known_function(self.ptr(), obj, called_scope, retval, 0, null, if (named_params) |args| args.ptr() else null),
             else => {
                 var arr: [n]c.zval = undefined;
                 inline for (0..n) |i| arr[i] = params[i];
-                c.zend_call_known_function(self.ptr(), obj, scope, retval, @intCast(n), @ptrCast(&arr), if (named_params) |args| args.ptr() else null);
+                c.zend_call_known_function(self.ptr(), obj, called_scope, retval, @intCast(n), @ptrCast(&arr), if (named_params) |args| args.ptr() else null);
             },
         }
         try exception.check();
@@ -202,7 +234,7 @@ pub const Function = opaque {
     inline fn tryInvoke(
         self: *Function,
         obj: ?*c.zend_object,
-        scope: ?*c.zend_class_entry,
+        called_scope: ?*c.zend_class_entry,
         retval: ?*c.zval,
         params: anytype,
         named_params: ?*Array,
@@ -229,7 +261,7 @@ pub const Function = opaque {
                 var context: Context = .{
                     .function = self,
                     .obj = obj,
-                    .scope = scope,
+                    .scope = called_scope,
                     .retval = retval,
                     .named_params = named_params,
                 };
@@ -253,7 +285,7 @@ pub const Function = opaque {
                 var context: Context = .{
                     .function = self,
                     .obj = obj,
-                    .scope = scope,
+                    .scope = called_scope,
                     .retval = retval,
                     .params = &arr,
                     .named_params = named_params,

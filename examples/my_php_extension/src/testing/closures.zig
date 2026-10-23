@@ -175,6 +175,10 @@ pub fn makeFnClosure(ctx: phpz.Ctx, kind_arg: ?[]const u8) !void {
         phpz.closure.createFromFn(named_arguments.parsedSum, ctx.retval);
     } else if (std.mem.eql(u8, kind, "parse_variadic")) {
         phpz.closure.createFromFn(named_arguments.parsedVariadicCount, ctx.retval);
+    } else if (std.mem.eql(u8, kind, "variadic")) {
+        phpz.closure.createFromFn(@import("variadic.zig").parse, ctx.retval);
+    } else if (std.mem.eql(u8, kind, "variadic_mode")) {
+        phpz.closure.createFromFn(@import("variadic.zig").modeCount, ctx.retval);
     } else return error.UnknownClosureKind;
 }
 

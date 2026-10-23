@@ -1,5 +1,5 @@
 --TEST--
-expectArgsAllowExtraNamed validates argument slots while preserving access to extra named arguments
+expectArgs validates fixed arguments and accepts only named variadic extras with check(.named_only)
 --EXTENSIONS--
 my_php_extension
 --FILE--
@@ -20,7 +20,7 @@ check(checkedNamedArguments(...['name' => 1, 'extra' => [2, 3]]),
 echo "declared names, optional defaults and named values: passed\n";
 
 // Generic closure arginfo does not enforce required slots or their types:
-// these errors must come from expectArgsAllowExtraNamed itself.
+// validation comes from expectArgs and the explicit named-only check.
 $checked = makeFnClosure('checked_named');
 check($checked(1, extra: 3), ['name' => 1, 'age' => 2, 'extra' => 3]);
 check($checked(1, 4, extra: 3), ['name' => 1, 'age' => 4, 'extra' => 3]);

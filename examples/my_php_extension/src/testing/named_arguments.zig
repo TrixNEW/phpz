@@ -4,47 +4,39 @@ const Zval = phpz.Zval;
 
 /// PHP: checkedNamedArguments(int $name, int $age = 2, mixed ...$args): array
 pub fn checkedNamedArguments(ctx: phpz.Ctx) !void {
-    const args = try ctx.call.expectArgsAllowExtraNamed(&.{
+    const args = try ctx.call.expectArgs(&.{
         .{ .int = .{} },
         .{ .int = .{ .optional = true } },
+        .{ .variadic = .{} },
     }, {});
+    try args[2].check(.named_only);
     const result = Zval.Array.empty(ctx.retval.ptr());
     result.set(.int, "name", args[0]);
     result.set(.int, "age", args[1] orelse 2);
-    try collect(ctx, result, 2);
+    try collect(args[2], result);
 }
 
 /// PHP: collectArguments(int $name = 1, int $age = 2, mixed ...$args): array
-pub fn collectArguments(ctx: phpz.Ctx) !void {
-    try ctx.call.expectArgCount(0, std.math.maxInt(u32));
-    const name = try ctx.call.expectArg(1, .{ .int = .{ .optional = true } }, {});
-    const age = try ctx.call.expectArg(2, .{ .int = .{ .optional = true } }, {});
+pub fn collectArguments(ctx: phpz.Ctx, name: ?i64, age: ?i64, rest: phpz.Variadic) !void {
     const result = Zval.Array.empty(ctx.retval.ptr());
     result.set(.int, "name", name orelse 1);
     result.set(.int, "age", age orelse 2);
-    try collect(ctx, result, 2);
+    try collect(rest, result);
 }
 
 /// Used by a generic closure and a registered by-reference variadic function.
-pub fn collectAll(ctx: phpz.Ctx) !void {
-    try collect(ctx, Zval.Array.empty(ctx.retval.ptr()), 0);
+pub fn collectAll(ctx: phpz.Ctx, rest: phpz.Variadic) !void {
+    try collect(rest, Zval.Array.empty(ctx.retval.ptr()));
 }
 
-fn collect(ctx: phpz.Ctx, result: *Zval.Array, prefix: usize) !void {
-    const slots = ctx.call.args();
-    for (slots[@min(prefix, slots.len)..]) |*raw| {
+fn collect(rest: phpz.Variadic, result: *Zval.Array) !void {
+    var it = rest.iterator();
+    while (it.next()) |entry| {
+        const value = try entry.expect(.{ .mixed = .{} }, {});
         var copy = Zval.raw.undef;
-        Zval.raw.copy(&copy, raw);
+        Zval.raw.copy(&copy, value.ptr());
         errdefer Zval.raw.release(&copy);
-        try result.append(.mixed, &copy);
-    }
-    if (ctx.call.extraNamedArgs()) |named| {
-        var it = named.fastIterator();
-        while (it.next()) |entry| {
-            var copy = Zval.raw.undef;
-            Zval.raw.copy(&copy, entry.value);
-            result.set(.mixed, entry.key.string, &copy);
-        }
+        if (entry.name()) |name| result.set(.mixed, name, &copy) else try result.append(.mixed, &copy);
     }
 }
 

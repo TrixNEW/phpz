@@ -3,9 +3,9 @@ const std = @import("std");
 const phpz = @import("phpz");
 
 /// PHP: MyPHPExt\Dumper::dump(mixed ...$values): void
-pub fn dump(ctx: phpz.Ctx) !void {
-    try ctx.call.expectNoExtraNamedArgs();
-    for (ctx.call.args()) |*zv| {
+pub fn dump(args: phpz.Variadic) !void {
+    try args.check(.positional_only);
+    for (args.positional) |*zv| {
         try dumpValue(.from(zv), 0);
     }
 }
